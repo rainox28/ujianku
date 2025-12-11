@@ -22,6 +22,7 @@ import { PembahasanPG } from "@/components/result/PembahasanPG";
 import { PembahasanEssay } from "@/components/result/PembahasanEssay";
 import { LearningRecommendations } from "@/components/result/LearningRecommendations";
 import { ResultActions } from "@/components/result/ResultActions";
+import Image from "next/image";
 
 type TabType = "overview" | "pg" | "essay";
 
@@ -73,7 +74,7 @@ export default function ExamResultPage() {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-lg border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-16 gap-20">
             <Link
               href="/"
               className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
@@ -82,11 +83,18 @@ export default function ExamResultPage() {
               <span className="hidden sm:inline">Kembali</span>
             </Link>
 
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
+            <div className="flex items-center gap-2 w-full justify-center">
+              {/* <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
                 <BookOpen className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold gradient-text">Hasil Ujian</span>
+              </div> */}
+              <span className="font-bold gradient-text flex items-center gap-2">Hasil 
+                <Image
+                  src="/images/17.png"
+                  alt="Logo Ujian Digital AI"
+                  width={100}
+                  height={10}
+                />
+              </span>
             </div>
 
             <div className="w-20" />

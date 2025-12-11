@@ -29,6 +29,7 @@ import {
 } from "@/lib/constants";
 import { cn, getKelasSuffix, getSemesterLabel } from "@/lib/utils";
 import { useGenerateExam } from "@/hooks/useGenerateExam";
+import Image from "next/image";
 
 // ✅ Loading Component inline
 function GeneratingLoader({ step }: { step: number }) {
@@ -309,10 +310,16 @@ const handleSubmit = async () => {
               <span className="hidden sm:inline">Kembali</span>
             </Link>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
+              {/* <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
                 <BookOpen className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold gradient-text">UjianKu</span>
+              <span className="font-bold gradient-text">UjianKu</span> */}
+              <Image
+                src="/images/17.png"
+                alt="Logo Ujian Digital AI"
+                width={100}
+                height={10}
+              />
             </div>
             <div className="w-20" />
           </div>
@@ -541,9 +548,9 @@ const handleSubmit = async () => {
               transition={{ duration: 0.3 }}
             >
               <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-2xl mb-4">
+                {/* <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-2xl mb-4">
                   <Sparkles className="w-8 h-8 text-primary-600" />
-                </div>
+                </div> */}
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                   Siap Memulai Ujian!
                 </h1>
@@ -617,7 +624,7 @@ const handleSubmit = async () => {
                     <h3 className="font-semibold text-gray-900">
                       Upload Materi Referensi
                     </h3>
-                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                    <span className="text-xs bg-green-200 text-green-600 px-2 py-1 rounded-full">
                       Opsional
                     </span>
                   </div>

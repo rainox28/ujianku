@@ -1,4 +1,3 @@
-// components/exam/QuestionPG.tsx
 "use client";
 
 import { memo } from "react";
@@ -21,29 +20,34 @@ export const QuestionPG = memo(function QuestionPG({
   disabled = false,
 }: Props) {
   return (
-    <div id={`pg-${soal.nomor}`} className="scroll-mt-24">
-      <div className="exam-paper-clean p-6 mb-4">
+    <div id={`pg-${soal.nomor}`} className="scroll-mt-32 sm:scroll-mt-24">
+      <div className="exam-paper-clean p-4 sm:p-8 mb-6 shadow-sm border-gray-200">
         {/* Question Header */}
-        <div className="flex gap-4 mb-4">
-          <span className="question-number flex-shrink-0">{soal.nomor}</span>
-          <p className="text-gray-800 font-serif text-lg leading-relaxed">
-            {soal.pertanyaan}
-          </p>
+        <div className="flex gap-3 sm:gap-5 mb-6">
+          <span className="question-number flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 text-sm sm:text-base mt-1">
+            {soal.nomor}
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="text-gray-900 font-serif text-lg sm:text-xl leading-relaxed tracking-wide">
+              {soal.pertanyaan}
+            </p>
+          </div>
         </div>
 
         {/* Options */}
-        <div className="ml-12 space-y-2">
+        {/* Mobile: Full width, Desktop: Indented */}
+        <div className="w-full sm:pl-14 space-y-3 sm:space-y-4">
           {OPTIONS.map((opt) => {
             const isSelected = jawaban === opt;
             return (
               <label
                 key={opt}
                 className={cn(
-                  "flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200",
+                  "relative flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl cursor-pointer transition-all duration-200 border-2 select-none active:scale-[0.99]",
                   isSelected
-                    ? "bg-primary-50 border-2 border-primary-400"
-                    : "hover:bg-gray-50 border-2 border-transparent",
-                  disabled && "cursor-not-allowed opacity-60"
+                    ? "bg-primary-50 border-primary-500 shadow-sm"
+                    : "bg-white border-gray-100 hover:border-primary-200 hover:bg-gray-50",
+                  disabled && "cursor-not-allowed opacity-60 grayscale"
                 )}
               >
                 <input
@@ -55,17 +59,47 @@ export const QuestionPG = memo(function QuestionPG({
                   disabled={disabled}
                   className="sr-only"
                 />
+
+                {/* Circle Label (A, B, C...) */}
                 <span
                   className={cn(
-                    "flex-shrink-0 mt-0.5",
-                    isSelected ? "option-label-selected" : "option-label"
+                    "flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full text-sm font-bold transition-colors",
+                    isSelected
+                      ? "bg-primary-600 text-white"
+                      : "bg-gray-100 text-gray-500 group-hover:bg-primary-100 group-hover:text-primary-600"
                   )}
                 >
                   {opt}
                 </span>
-                <span className="text-gray-700 font-medium">
+
+                {/* Text Jawaban */}
+                <span
+                  className={cn(
+                    "flex-1 text-base sm:text-lg font-medium leading-relaxed mt-0.5",
+                    isSelected ? "text-primary-900" : "text-gray-700"
+                  )}
+                >
                   {soal.opsi[opt]}
                 </span>
+
+                {/* Checkmark Icon (Visual Feedback) */}
+                {isSelected && (
+                  <div className="absolute right-3 top-3 sm:right-4 sm:top-4 text-primary-600">
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2.5}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  </div>
+                )}
               </label>
             );
           })}
