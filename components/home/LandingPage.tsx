@@ -252,72 +252,124 @@ export default function LandingPage() {
 
           {/* Hero Image - Exam Paper Preview */}
           <motion.div
-            className="mt-20 relative"
+            className="mt-16 sm:mt-20 relative px-4 sm:px-0"
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.3 }}
           >
-            {/* Gradient overlay */}
+            {/* Gradient overlay for fade effect at bottom */}
             <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent z-10 pointer-events-none" />
 
-            {/* Decorative elements */}
-            <div className="absolute -top-10 -left-10 w-40 h-40 bg-primary-200 rounded-full blur-3xl opacity-30" />
-            <div className="absolute -bottom-10 -right-10 w-60 h-60 bg-accent-200 rounded-full blur-3xl opacity-30" />
+            {/* Decorative elements (Background Blobs) */}
+            <div className="absolute -top-6 -left-6 sm:-top-10 sm:-left-10 w-32 h-32 sm:w-40 sm:h-40 bg-primary-200 rounded-full blur-3xl opacity-40" />
+            <div className="absolute -bottom-6 -right-6 sm:-bottom-10 sm:-right-10 w-48 h-48 sm:w-60 sm:h-60 bg-accent-200 rounded-full blur-3xl opacity-40" />
 
-            <div className="exam-paper-clean max-w-4xl mx-auto p-8 sm:p-12 relative">
-              <div className="border-b-2 border-gray-200 pb-6 mb-6">
+            {/* Paper Container */}
+            <div className="exam-paper-clean max-w-4xl mx-auto p-5 sm:p-12 relative shadow-2xl shadow-primary-900/5 border border-gray-100/80 bg-white/80 backdrop-blur-sm">
+              {/* Header Exam */}
+              <div className="border-b-2 border-gray-100 pb-5 mb-5 sm:pb-6 sm:mb-6">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
-                    <h3 className="font-serif text-xl sm:text-2xl font-bold text-gray-800">
+                    <h3 className="font-serif text-lg sm:text-2xl font-bold text-gray-800 leading-tight">
                       UJIAN AKHIR SEMESTER
                     </h3>
-                    <p className="text-gray-500 mt-1 font-body">
-                      Matematika - Kelas 10 SMA - Semester 1
+                    <p className="text-sm sm:text-base text-gray-500 mt-1 font-body flex items-center gap-2">
+                      <span className="bg-gray-100 px-2 py-0.5 rounded text-xs font-bold text-gray-600">
+                        SMA
+                      </span>
+                      Matematika - Kelas 10
                     </p>
                   </div>
-                  <div className="text-right bg-primary-50 px-4 py-2 rounded-xl">
-                    <div className="text-xs text-gray-500 font-heading uppercase tracking-wider">
-                      Waktu Tersisa
+
+                  {/* Timer Badge */}
+                  <div className="flex items-center gap-3 bg-primary-50 px-3 py-2 sm:px-4 sm:py-2 rounded-xl w-full sm:w-auto border border-primary-100">
+                    <div className="p-1.5 bg-white rounded-lg shadow-sm">
+                      <Clock className="w-4 h-4 text-primary-600" />
                     </div>
-                    <div className="timer-display text-primary-600">89:45</div>
+                    <div>
+                      <div className="text-[10px] text-gray-400 font-heading uppercase tracking-wider font-bold">
+                        Sisa Waktu
+                      </div>
+                      <div className="timer-display text-primary-700 text-base sm:text-lg leading-none">
+                        89:45
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Sample Question */}
+              {/* Sample Question Area */}
               <div className="space-y-6">
-                <div className="p-4 sm:p-6 bg-gray-50 rounded-xl border border-gray-100">
-                  <div className="flex gap-4">
-                    <span className="question-number">1</span>
-                    <div className="flex-1">
-                      <p className="text-gray-800 mb-4 font-serif text-lg leading-relaxed">
-                        Jika f(x) = 2x² + 3x - 5, maka nilai f(-2) adalah...
+                <div className="p-4 sm:p-6 bg-gray-50/80 rounded-2xl border border-gray-100">
+                  <div className="flex gap-3 sm:gap-5">
+                    {/* Number Badge */}
+                    <span className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-lg shadow-sm flex items-center justify-center text-sm sm:text-base font-bold text-primary-600 font-mono border border-gray-100">
+                      1
+                    </span>
+
+                    <div className="flex-1 min-w-0">
+                      {/* Question Text */}
+                      <p className="text-gray-800 mb-5 font-serif text-base sm:text-lg leading-relaxed">
+                        Jika diketahui fungsi{" "}
+                        <span className="font-mono bg-white px-1 rounded border border-gray-200 text-sm">
+                          f(x) = 2x² + 3x - 5
+                        </span>
+                        , maka nilai dari{" "}
+                        <span className="font-mono bg-white px-1 rounded border border-gray-200 text-sm">
+                          f(-2)
+                        </span>{" "}
+                        adalah...
                       </p>
-                      <div className="grid sm:grid-cols-2 gap-3">
+
+                      {/* Options Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {[
-                          { label: "A", text: "-3" },
-                          { label: "B", text: "-1" },
-                          { label: "C", text: "1" },
-                          { label: "D", text: "3" },
-                          { label: "E", text: "5" },
+                          { label: "A", text: "-3", selected: true },
+                          { label: "B", text: "-1", selected: false },
+                          { label: "C", text: "1", selected: false },
+                          { label: "D", text: "3", selected: false },
+                          { label: "E", text: "5", selected: false },
                         ].map((opt, i) => (
-                          <label
+                          <div
                             key={i}
-                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                            className={`
+                    group flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 cursor-default select-none
+                    ${
+                      opt.selected
+                        ? "bg-white border-primary-500 shadow-md shadow-primary-500/10 scale-[1.02]"
+                        : "bg-white border-transparent hover:border-gray-200 shadow-sm opacity-80"
+                    }
+                  `}
                           >
                             <span
-                              className={
-                                i === 0
-                                  ? "option-label-selected"
-                                  : "option-label"
-                              }
+                              className={`
+                      w-8 h-8 flex items-center justify-center rounded-lg text-sm font-bold transition-colors
+                      ${
+                        opt.selected
+                          ? "bg-primary-600 text-white"
+                          : "bg-gray-100 text-gray-500 group-hover:bg-gray-200"
+                      }
+                    `}
                             >
                               {opt.label}
                             </span>
-                            <span className="text-gray-700 font-medium">
+                            <span
+                              className={`font-medium ${
+                                opt.selected
+                                  ? "text-primary-700"
+                                  : "text-gray-600"
+                              }`}
+                            >
                               {opt.text}
                             </span>
-                          </label>
+
+                            {/* Checkmark for selected */}
+                            {opt.selected && (
+                              <div className="ml-auto text-primary-600">
+                                <CheckCircle className="w-5 h-5" />
+                              </div>
+                            )}
+                          </div>
                         ))}
                       </div>
                     </div>
