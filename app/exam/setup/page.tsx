@@ -1,0 +1,726 @@
+// app/exam/setup/page.tsx
+"use client";
+
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  BookOpen,
+  ArrowLeft,
+  ArrowRight,
+  Upload,
+  X,
+  FileText,
+  CheckCircle,
+  Sparkles,
+  GraduationCap,
+  Calendar,
+  BookMarked,
+  Brain,
+  Loader2,
+} from "lucide-react";
+import { Jenjang, Kelas, Semester, ExamSetup } from "@/types";
+import {
+  MATA_PELAJARAN,
+  KELAS_BY_JENJANG,
+  JENJANG_OPTIONS,
+  EXAM_CONFIG,
+} from "@/lib/constants";
+import { cn, getKelasSuffix, getSemesterLabel } from "@/lib/utils";
+import { useGenerateExam } from "@/hooks/useGenerateExam";
+
+// ✅ Loading Component inline
+function GeneratingLoader({ step }: { step: number }) {
+  const steps = [
+    {
+      icon: Brain,
+      text: "AI sedang menganalisis kurikulum...",
+      done: step > 0,
+    },
+    { icon: FileText, text: "Membuat soal pilihan ganda...", done: step > 1 },
+    { icon: Sparkles, text: "Membuat soal essay...", done: step > 2 },
+    { icon: CheckCircle, text: "Memvalidasi soal...", done: step > 3 },
+  ];
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 p-4">
+      <div className="text-center max-w-md mx-auto">
+        {/* Animated Brain */}
+        <motion.div
+          className="w-24 h-24 mx-auto mb-8 relative"
+          animate={{ scale: [1, 1.1, 1] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <div className="absolute inset-0 bg-primary-200 rounded-full animate-ping opacity-25" />
+          <div className="relative w-24 h-24 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center">
+            <Brain className="w-12 h-12 text-white" />
+          </div>
+        </motion.div>
+
+        {/* Title */}
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
+          AI Sedang Bekerja
+        </h2>
+        <p className="text-gray-600 mb-8">
+          Membuat soal ujian khusus untuk kamu...
+        </p>
+
+        {/* Progress Steps */}
+        <div className="space-y-3 text-left">
+          {steps.map((s, index) => {
+            const Icon = s.icon;
+            const isActive = index === step;
+            const isComplete = s.done;
+
+            return (
+              <motion.div
+                key={index}
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-xl transition-all",
+                  isActive && "bg-primary-50 border border-primary-200",
+                  isComplete && "bg-green-50 border border-green-200",
+                  !isActive && !isComplete && "bg-gray-50"
+                )}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <div
+                  className={cn(
+                    "w-8 h-8 rounded-lg flex items-center justify-center",
+                    isActive && "bg-primary-500 text-white",
+                    isComplete && "bg-green-500 text-white",
+                    !isActive && !isComplete && "bg-gray-200 text-gray-400"
+                  )}
+                >
+                  {isComplete ? (
+                    <CheckCircle className="w-4 h-4" />
+                  ) : (
+                    <Icon className="w-4 h-4" />
+                  )}
+                </div>
+                <span
+                  className={cn(
+                    "text-sm font-medium flex-1",
+                    isActive && "text-primary-700",
+                    isComplete && "text-green-700",
+                    !isActive && !isComplete && "text-gray-400"
+                  )}
+                >
+                  {s.text}
+                </span>
+                {isActive && (
+                  <Loader2 className="w-4 h-4 text-primary-500 animate-spin" />
+                )}
+              </motion.div>
+            );
+          })}
+        </div>
+
+        {/* Tip */}
+        <motion.p
+          className="mt-8 text-sm text-gray-500 italic"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1 }}
+        >
+          💡 Proses ini membutuhkan waktu sekitar 10-30 detik
+        </motion.p>
+      </div>
+    </div>
+  );
+}
+
+// ✅ Error Component
+function ErrorDisplay({
+  error,
+  onRetry,
+}: {
+  error: string;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-50 via-white to-blue-50">
+      <div className="card p-8 text-center max-w-md">
+        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <X className="w-8 h-8 text-red-600" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">
+          Gagal Generate Soal
+        </h2>
+        <p className="text-gray-600 mb-6">{error}</p>
+        <div className="flex gap-3 justify-center">
+          <button onClick={onRetry} className="btn-primary">
+            Coba Lagi
+          </button>
+          <Link href="/" className="btn-secondary">
+            Ke Beranda
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function ExamSetupPage() {
+  const router = useRouter();
+  const [step, setStep] = useState(1);
+  const [generatingStep, setGeneratingStep] = useState(0);
+
+  const [formData, setFormData] = useState<ExamSetup>({
+    jenjang: "SMP",
+    kelas: 7,
+    semester: 1,
+    mataPelajaran: "",
+    uploadedFile: null,
+  });
+
+  // ✅ Use the hook
+  const { isLoading, error, generateExam, reset } = useGenerateExam();
+
+  const availableMapel = MATA_PELAJARAN.filter((m) =>
+    m.tersediaUntuk.includes(formData.jenjang)
+  );
+
+  const handleJenjangChange = (jenjang: Jenjang) => {
+    const defaultKelas = KELAS_BY_JENJANG[jenjang][0] as Kelas;
+    setFormData((prev) => ({
+      ...prev,
+      jenjang,
+      kelas: defaultKelas,
+      mataPelajaran: "",
+    }));
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const validTypes = [
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      ];
+      if (validTypes.includes(file.type)) {
+        setFormData((prev) => ({ ...prev, uploadedFile: file }));
+      } else {
+        alert("Format file tidak didukung. Gunakan PDF, DOCX, atau PPTX.");
+      }
+    }
+  };
+
+  const removeFile = () => {
+    setFormData((prev) => ({ ...prev, uploadedFile: null }));
+  };
+
+  // ✅ Handle Submit with Loading
+
+const handleSubmit = async () => {
+  if (!formData.mataPelajaran) {
+    alert("Pilih mata pelajaran terlebih dahulu");
+    return;
+  }
+
+  // ✅ CLEAR OLD DATA sebelum generate ujian baru
+  sessionStorage.removeItem("examData");
+  sessionStorage.removeItem("examAnswers");
+  sessionStorage.removeItem("examResult");
+  sessionStorage.removeItem("examStartTime");
+  sessionStorage.removeItem("examSetup");
+
+  setGeneratingStep(0);
+  const stepInterval = setInterval(() => {
+    setGeneratingStep((prev) => (prev < 3 ? prev + 1 : prev));
+  }, 3000);
+
+  try {
+    const result = await generateExam({
+      jenjang: formData.jenjang,
+      kelas: formData.kelas,
+      semester: formData.semester,
+      mataPelajaran: formData.mataPelajaran,
+    });
+
+    clearInterval(stepInterval);
+
+    if (result) {
+      // Save fresh data
+      sessionStorage.setItem("examData", JSON.stringify(result));
+      sessionStorage.setItem(
+        "examSetup",
+        JSON.stringify({
+          jenjang: formData.jenjang,
+          kelas: formData.kelas,
+          semester: formData.semester,
+          mataPelajaran: formData.mataPelajaran,
+        })
+      );
+      sessionStorage.setItem("examStartTime", new Date().toISOString());
+
+      window.location.href = "/exam/start";
+    }
+  } catch (err) {
+    clearInterval(stepInterval);
+    setGeneratingStep(0);
+  }
+};
+
+
+  const handleRetry = () => {
+    reset();
+    setGeneratingStep(0);
+  };
+
+  const canProceed = () => {
+    switch (step) {
+      case 1:
+        return !!formData.jenjang;
+      case 2:
+        return !!formData.kelas && !!formData.semester;
+      case 3:
+        return !!formData.mataPelajaran;
+      default:
+        return false;
+    }
+  };
+
+  // ✅ Show Loading Screen
+  if (isLoading) {
+    return <GeneratingLoader step={generatingStep} />;
+  }
+
+  // ✅ Show Error Screen
+  if (error) {
+    return <ErrorDisplay error={error} onRetry={handleRetry} />;
+  }
+
+  // Main Form UI
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-gray-100">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <Link
+              href="/"
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="hidden sm:inline">Kembali</span>
+            </Link>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
+                <BookOpen className="w-5 h-5 text-white" />
+              </div>
+              <span className="font-bold gradient-text">UjianKu</span>
+            </div>
+            <div className="w-20" />
+          </div>
+        </div>
+      </header>
+
+      {/* Progress Bar */}
+      <div className="bg-white border-b border-gray-100">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-600">
+              Langkah {step} dari 4
+            </span>
+            <span className="text-sm text-gray-500">
+              {Math.round((step / 4) * 100)}% selesai
+            </span>
+          </div>
+          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-gradient-to-r from-primary-500 to-primary-600 rounded-full"
+              initial={{ width: 0 }}
+              animate={{ width: `${(step / 4) * 100}%` }}
+              transition={{ duration: 0.3 }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <AnimatePresence mode="wait">
+          {/* Step 1: Pilih Jenjang */}
+          {step === 1 && (
+            <motion.div
+              key="step1"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-2xl mb-4">
+                  <GraduationCap className="w-8 h-8 text-primary-600" />
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                  Pilih Jenjang Pendidikan
+                </h1>
+                <p className="text-gray-600">
+                  Pilih jenjang sekolah sesuai tingkat pendidikanmu
+                </p>
+              </div>
+
+              <div className="grid sm:grid-cols-3 gap-4">
+                {JENJANG_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => handleJenjangChange(option.value)}
+                    className={cn(
+                      "card p-6 text-left transition-all duration-200 hover:shadow-lg",
+                      formData.jenjang === option.value
+                        ? "ring-2 ring-primary-500 bg-primary-50"
+                        : "hover:bg-gray-50"
+                    )}
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-3xl font-bold gradient-text">
+                        {option.label}
+                      </span>
+                      {formData.jenjang === option.value && (
+                        <CheckCircle className="w-6 h-6 text-primary-600" />
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      {option.description}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Step 2: Pilih Kelas & Semester */}
+          {step === 2 && (
+            <motion.div
+              key="step2"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-2xl mb-4">
+                  <Calendar className="w-8 h-8 text-primary-600" />
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                  Pilih Kelas & Semester
+                </h1>
+                <p className="text-gray-600">
+                  Tentukan kelas dan semester yang ingin diujikan
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                {/* Kelas */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Kelas
+                  </label>
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                    {KELAS_BY_JENJANG[formData.jenjang].map((kelas) => (
+                      <button
+                        key={kelas}
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            kelas: kelas as Kelas,
+                          }))
+                        }
+                        className={cn(
+                          "py-3 px-4 rounded-xl font-semibold transition-all duration-200",
+                          formData.kelas === kelas
+                            ? "bg-primary-600 text-white shadow-lg shadow-primary-500/30"
+                            : "bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-300"
+                        )}
+                      >
+                        {kelas}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Semester */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Semester
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    {[1, 2].map((sem) => (
+                      <button
+                        key={sem}
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            semester: sem as Semester,
+                          }))
+                        }
+                        className={cn(
+                          "py-4 px-6 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2",
+                          formData.semester === sem
+                            ? "bg-primary-600 text-white shadow-lg shadow-primary-500/30"
+                            : "bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-300"
+                        )}
+                      >
+                        <span>Semester {sem}</span>
+                        <span className="text-sm opacity-80">
+                          ({sem === 1 ? "Ganjil" : "Genap"})
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Step 3: Pilih Mata Pelajaran */}
+          {step === 3 && (
+            <motion.div
+              key="step3"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-2xl mb-4">
+                  <BookMarked className="w-8 h-8 text-primary-600" />
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                  Pilih Mata Pelajaran
+                </h1>
+                <p className="text-gray-600">
+                  Pilih mata pelajaran yang ingin kamu ujikan
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {availableMapel.map((mapel) => (
+                  <button
+                    key={mapel.id}
+                    onClick={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        mataPelajaran: mapel.id,
+                      }))
+                    }
+                    className={cn(
+                      "card p-4 text-left transition-all duration-200 hover:shadow-lg",
+                      formData.mataPelajaran === mapel.id
+                        ? "ring-2 ring-primary-500 bg-primary-50"
+                        : "hover:bg-gray-50"
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{mapel.icon}</span>
+                      <span className="font-medium text-gray-900">
+                        {mapel.nama}
+                      </span>
+                      {formData.mataPelajaran === mapel.id && (
+                        <CheckCircle className="w-5 h-5 text-primary-600 ml-auto" />
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Step 4: Upload Materi & Konfirmasi */}
+          {step === 4 && (
+            <motion.div
+              key="step4"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-2xl mb-4">
+                  <Sparkles className="w-8 h-8 text-primary-600" />
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                  Siap Memulai Ujian!
+                </h1>
+                <p className="text-gray-600">
+                  Upload materi (opsional) dan konfirmasi pilihan kamu
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                {/* Summary */}
+                <div className="card p-6 bg-gray-50">
+                  <h3 className="font-semibold text-gray-900 mb-4">
+                    Ringkasan Ujian
+                  </h3>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+                        <GraduationCap className="w-5 h-5 text-primary-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Jenjang & Kelas</p>
+                        <p className="font-medium text-gray-900">
+                          {formData.jenjang} - {getKelasSuffix(formData.kelas)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+                        <Calendar className="w-5 h-5 text-primary-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Semester</p>
+                        <p className="font-medium text-gray-900">
+                          {getSemesterLabel(formData.semester)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+                        <BookMarked className="w-5 h-5 text-primary-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Mata Pelajaran</p>
+                        <p className="font-medium text-gray-900">
+                          {
+                            availableMapel.find(
+                              (m) => m.id === formData.mataPelajaran
+                            )?.nama
+                          }
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+                        <FileText className="w-5 h-5 text-primary-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Jumlah Soal</p>
+                        <p className="font-medium text-gray-900">
+                          {EXAM_CONFIG.TOTAL_SOAL_PG} PG +{" "}
+                          {EXAM_CONFIG.TOTAL_SOAL_ESSAY} Essay
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* File Upload */}
+                <div className="card p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-gray-900">
+                      Upload Materi Referensi
+                    </h3>
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                      Opsional
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Upload file materi (PDF, DOCX, PPTX) agar soal lebih
+                    relevan.
+                  </p>
+
+                  {formData.uploadedFile ? (
+                    <div className="flex items-center gap-4 p-4 bg-green-50 rounded-xl border border-green-200">
+                      <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                        <FileText className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 truncate">
+                          {formData.uploadedFile.name}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {(formData.uploadedFile.size / 1024 / 1024).toFixed(
+                            2
+                          )}{" "}
+                          MB
+                        </p>
+                      </div>
+                      <button
+                        onClick={removeFile}
+                        className="p-2 hover:bg-green-100 rounded-lg"
+                      >
+                        <X className="w-5 h-5 text-gray-500" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-primary-400 hover:bg-primary-50/50 transition-all">
+                      <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                      <p className="text-sm text-gray-500">
+                        <span className="font-semibold text-primary-600">
+                          Klik untuk upload
+                        </span>{" "}
+                        atau drag & drop
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        PDF, DOCX, atau PPTX (Max 10MB)
+                      </p>
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept=".pdf,.docx,.pptx"
+                        onChange={handleFileUpload}
+                      />
+                    </label>
+                  )}
+                </div>
+
+                {/* Info Box */}
+                <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-xl text-sm">
+                  <Sparkles className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-blue-900 mb-1">
+                      AI akan membuat soal untuk kamu
+                    </p>
+                    <p className="text-blue-700">
+                      Waktu pengerjaan {EXAM_CONFIG.DURASI_MENIT} menit. Proses
+                      generate membutuhkan 10-30 detik.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Navigation Buttons */}
+        <div className="flex items-center justify-between mt-10 pt-6 border-t border-gray-100">
+          <button
+            onClick={() => setStep((prev) => Math.max(1, prev - 1))}
+            className={cn("btn-secondary", step === 1 && "invisible")}
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Sebelumnya
+          </button>
+
+          {step < 4 ? (
+            <button
+              onClick={() => setStep((prev) => Math.min(4, prev + 1))}
+              disabled={!canProceed()}
+              className="btn-primary"
+            >
+              Selanjutnya
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={isLoading}
+              className="btn-primary"
+            >
+              <Sparkles className="w-5 h-5" />
+              Mulai Ujian
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}

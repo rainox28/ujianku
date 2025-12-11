@@ -1,0 +1,9 @@
+// public/robots.txt
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /exam/start
+Disallow: /exam/result
+Disallow: /dashboard
+
+Sitemap: https://ujianku.vercel.app/sitemap.xml

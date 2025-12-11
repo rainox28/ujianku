@@ -1,26 +1,568 @@
+/* app/globals.css */
+
+/* 1. FONT IMPORTS (WAJIB PALING ATAS) */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+/* 2. TAILWIND IMPORT */
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* 3. THEME CONFIGURATION */
+@theme {
+  /* Font Family */
+  --font-display: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-heading: "Outfit", system-ui, sans-serif;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-serif: "Crimson Pro", Georgia, serif;
+  --font-mono: "JetBrains Mono", monospace;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* Colors: Primary - Modern Indigo */
+  --color-primary-50: #eef2ff;
+  --color-primary-100: #e0e7ff;
+  --color-primary-200: #c7d2fe;
+  --color-primary-300: #a5b4fc;
+  --color-primary-400: #818cf8;
+  --color-primary-500: #6366f1;
+  --color-primary-600: #4f46e5;
+  --color-primary-700: #4338ca;
+  --color-primary-800: #3730a3;
+  --color-primary-900: #312e81;
+  --color-primary-950: #1e1b4b;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* Colors: Accent - Vibrant Cyan */
+  --color-accent-50: #ecfeff;
+  --color-accent-100: #cffafe;
+  --color-accent-200: #a5f3fc;
+  --color-accent-300: #67e8f9;
+  --color-accent-400: #22d3ee;
+  --color-accent-500: #06b6d4;
+  --color-accent-600: #0891b2;
+  --color-accent-700: #0e7490;
+
+  /* Colors: Success */
+  --color-success-50: #ecfdf5;
+  --color-success-100: #d1fae5;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+
+  /* Colors: Warning */
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+
+  /* Colors: Danger */
+  --color-danger-50: #fef2f2;
+  --color-danger-100: #fee2e2;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+
+  /* Colors: Exam Custom */
+  --color-exam-paper: #fefefe;
+  --color-exam-line: #e5e7eb;
+  --color-exam-text: #1f2937;
+  --color-exam-margin: #fecaca;
+
+  /* Animations */
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-shimmer: shimmer 2s linear infinite;
+  --animate-gradient: gradient 8s ease infinite;
+  --animate-bounce-slow: bounce 3s ease-in-out infinite;
+
+  /* Keyframes */
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  @keyframes gradient {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* 4. BASE STYLES */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+  }
+
+  * {
+    @apply border-gray-200;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-white text-gray-900;
+    font-family: var(--font-sans);
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    @apply font-bold tracking-tight;
+  }
+
+  h1 { @apply text-4xl sm:text-5xl lg:text-6xl; letter-spacing: -0.025em; }
+  h2 { @apply text-3xl sm:text-4xl; letter-spacing: -0.02em; }
+  h3 { @apply text-2xl sm:text-3xl; letter-spacing: -0.015em; }
+  h4 { @apply text-xl sm:text-2xl; letter-spacing: -0.01em; }
+
+  p { @apply leading-relaxed; }
+  code, pre { font-family: var(--font-mono); font-feature-settings: "liga" 1, "calt" 1; }
+}
+
+/* 5. COMPONENT CLASSES */
+@layer components {
+  /* === TYPOGRAPHY === */
+  .font-display { font-family: var(--font-display); }
+  .font-heading { font-family: var(--font-heading); }
+  .font-body { font-family: var(--font-sans); }
+  .font-serif { font-family: var(--font-serif); }
+  .font-mono { font-family: var(--font-mono); }
+
+  .text-display {
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+  }
+
+  /* === BUTTONS === */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 
+           bg-primary-600 text-white font-semibold rounded-xl
+           hover:bg-primary-700 active:bg-primary-800
+           transition-all duration-200 ease-out
+           shadow-lg shadow-primary-500/25 hover:shadow-xl hover:shadow-primary-500/30
+           hover:-translate-y-0.5 active:translate-y-0
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0;
+    font-family: var(--font-heading);
+    letter-spacing: -0.01em;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3
+           bg-white text-gray-700 font-semibold rounded-xl
+           border-2 border-gray-200 hover:border-primary-300 hover:text-primary-600
+           transition-all duration-200 ease-out
+           hover:-translate-y-0.5 active:translate-y-0;
+    font-family: var(--font-heading);
+    letter-spacing: -0.01em;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3
+           text-gray-600 font-semibold rounded-xl
+           hover:bg-gray-100 hover:text-gray-900
+           transition-all duration-200 ease-out;
+    font-family: var(--font-heading);
+  }
+
+  .btn-accent {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 
+           bg-accent-500 text-white font-semibold rounded-xl
+           hover:bg-accent-600 active:bg-accent-700
+           transition-all duration-200 ease-out
+           shadow-lg shadow-accent-500/25 hover:shadow-xl hover:shadow-accent-500/30
+           hover:-translate-y-0.5 active:translate-y-0;
+    font-family: var(--font-heading);
+    letter-spacing: -0.01em;
+  }
+
+  /* === CARDS === */
+  .card {
+    @apply bg-white rounded-2xl border border-gray-100 
+           shadow-lg shadow-gray-100/50;
+  }
+
+  /* FIX: Manual expand of .card styles + hover styles */
+  .card-hover {
+    @apply bg-white rounded-2xl border border-gray-100 
+           shadow-lg shadow-gray-100/50
+           hover:shadow-xl hover:border-gray-200 
+           hover:-translate-y-1 transition-all duration-300;
+  }
+
+  .card-glass {
+    @apply bg-white/70 backdrop-blur-xl rounded-2xl 
+           border border-white/20 shadow-xl;
+  }
+
+  .card-gradient {
+    @apply rounded-2xl p-[2px] bg-gradient-to-br from-primary-500 via-accent-500 to-primary-600;
+  }
+
+  .card-gradient-inner {
+    @apply bg-white rounded-[14px] p-6;
+  }
+
+  /* === FORM ELEMENTS === */
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl border-2 border-gray-200
+           focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10
+           outline-none transition-all duration-200
+           text-gray-900 placeholder:text-gray-400;
+    font-family: var(--font-sans);
+  }
+
+  .select-field {
+    @apply w-full px-4 py-3 rounded-xl border-2 border-gray-200
+           focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10
+           outline-none transition-all duration-200
+           text-gray-900 bg-white cursor-pointer
+           appearance-none bg-no-repeat bg-right pr-10;
+    font-family: var(--font-sans);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.75rem center;
+    background-size: 1.5em 1.5em;
+  }
+
+  .textarea-field {
+    @apply w-full px-4 py-3 rounded-xl border-2 border-gray-200
+           focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10
+           outline-none transition-all duration-200
+           text-gray-900 placeholder:text-gray-400 resize-none;
+    font-family: var(--font-sans);
+  }
+
+  /* === TEXT EFFECTS === */
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-primary-500) 50%, var(--color-accent-500) 100%);
+  }
+
+  .gradient-text-animated {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(90deg, var(--color-primary-600), var(--color-accent-500), var(--color-primary-600));
+    background-size: 200% auto;
+    animation: gradient 3s ease infinite;
+  }
+
+  .text-shimmer {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(
+      90deg,
+      var(--color-primary-600) 0%,
+      var(--color-primary-400) 40%,
+      var(--color-primary-600) 60%,
+      var(--color-primary-600) 100%
+    );
+    background-size: 200% auto;
+    animation: shimmer 3s linear infinite;
+  }
+
+  /* === EXAM PAPER STYLE === */
+  .exam-paper {
+    @apply bg-exam-paper rounded-lg shadow-md;
+    font-family: var(--font-serif);
+    border: 1px solid var(--color-exam-line);
+    background-image: 
+      linear-gradient(90deg, transparent 60px, var(--color-exam-margin) 60px, var(--color-exam-margin) 62px, transparent 62px),
+      linear-gradient(var(--color-exam-line) 1px, transparent 1px);
+    background-size: 100% 2rem;
+    line-height: 2rem;
+  }
+
+  .exam-paper-clean {
+    @apply bg-exam-paper rounded-lg shadow-md border border-exam-line;
+    font-family: var(--font-serif);
+  }
+
+  /* === TIMER === */
+  .timer-display {
+    font-family: var(--font-mono);
+    @apply text-3xl font-bold tracking-wider;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "ss01" 1;
+  }
+
+  /* FIX: Manual expand for timer classes */
+  .timer-normal {
+    @apply text-3xl font-bold tracking-wider text-primary-600;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "ss01" 1;
+  }
+
+  .timer-warning {
+    @apply text-3xl font-bold tracking-wider text-warning-600;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "ss01" 1;
+    animation: pulse 1s ease-in-out infinite;
+  }
+
+  .timer-danger {
+    @apply text-3xl font-bold tracking-wider text-danger-600;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "ss01" 1;
+    animation: pulse 0.5s ease-in-out infinite;
+  }
+
+  /* === BADGES === */
+  .badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 
+           rounded-full text-sm font-medium;
+    font-family: var(--font-heading);
+  }
+
+  /* FIX: Manual expand for badges */
+  .badge-primary {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium 
+           bg-primary-100 text-primary-700;
+    font-family: var(--font-heading);
+  }
+
+  .badge-accent {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium
+           bg-accent-100 text-accent-700;
+    font-family: var(--font-heading);
+  }
+
+  .badge-success {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium
+           bg-success-50 text-success-600;
+    font-family: var(--font-heading);
+  }
+
+  .badge-warning {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium
+           bg-warning-50 text-warning-600;
+    font-family: var(--font-heading);
+  }
+
+  .badge-danger {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium
+           bg-danger-50 text-danger-600;
+    font-family: var(--font-heading);
+  }
+
+  /* === SPECIAL COMPONENTS === */
+  .stat-number {
+    font-family: var(--font-display);
+    @apply text-4xl sm:text-5xl font-extrabold tracking-tight;
+    letter-spacing: -0.03em;
+  }
+
+  .question-number {
+    font-family: var(--font-mono);
+    @apply inline-flex items-center justify-center 
+           w-8 h-8 rounded-lg bg-primary-100 text-primary-700 
+           text-sm font-bold;
+  }
+
+  /* FIX: Manual expand for question-number-active */
+  .question-number-active {
+    @apply inline-flex items-center justify-center w-8 h-8 rounded-lg text-sm font-bold
+           bg-primary-600 text-white;
+    font-family: var(--font-mono);
+  }
+
+  .option-label {
+    font-family: var(--font-heading);
+    @apply inline-flex items-center justify-center 
+           w-8 h-8 rounded-full border-2 border-gray-300 
+           text-sm font-semibold text-gray-600
+           transition-all duration-200 cursor-pointer
+           hover:border-primary-400 hover:text-primary-600;
+  }
+
+  /* FIX: Manual expand for option-labels */
+  .option-label-selected {
+    @apply inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold
+           transition-all duration-200 cursor-pointer
+           border-primary-500 bg-primary-500 text-white
+           hover:border-primary-500 hover:text-white;
+    font-family: var(--font-heading);
+  }
+
+  .option-label-correct {
+    @apply inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold
+           transition-all duration-200 cursor-pointer
+           border-success-500 bg-success-500 text-white;
+    font-family: var(--font-heading);
+  }
+
+  .option-label-wrong {
+    @apply inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold
+           transition-all duration-200 cursor-pointer
+           border-danger-500 bg-danger-500 text-white;
+    font-family: var(--font-heading);
+  }
+
+  /* === NAVIGATION === */
+  .nav-link {
+    @apply text-gray-600 hover:text-gray-900 font-medium 
+           transition-colors duration-200;
+    font-family: var(--font-heading);
+    letter-spacing: -0.01em;
+  }
+
+  /* FIX: Manual expand for nav-link-active */
+  .nav-link-active {
+    @apply font-medium transition-colors duration-200 text-primary-600;
+    font-family: var(--font-heading);
+    letter-spacing: -0.01em;
+  }
+
+  /* === LOADING STATES === */
+  .skeleton {
+    @apply bg-gray-200 rounded-lg animate-pulse;
+  }
+
+  .loading-spinner {
+    @apply w-5 h-5 border-2 border-current border-t-transparent 
+           rounded-full animate-spin;
+  }
+
+  /* === PROGRESS === */
+  .progress-bar {
+    @apply h-2 bg-gray-100 rounded-full overflow-hidden;
+  }
+
+  .progress-fill {
+    @apply h-full bg-gradient-to-r from-primary-500 to-primary-600 
+           rounded-full transition-all duration-500 ease-out;
+  }
+
+  /* === SECTION STYLES === */
+  .section-title {
+    font-family: var(--font-heading);
+    @apply text-3xl sm:text-4xl font-bold text-gray-900 mb-4;
+    letter-spacing: -0.02em;
+  }
+
+  .section-subtitle {
+    font-family: var(--font-sans);
+    @apply text-lg text-gray-600 max-w-2xl mx-auto;
+  }
+
+  /* === FEATURE CARD ICON === */
+  .feature-icon {
+    @apply w-14 h-14 rounded-2xl flex items-center justify-center;
+  }
+
+  /* === STEP INDICATOR === */
+  .step-number {
+    font-family: var(--font-display);
+    @apply w-8 h-8 rounded-full bg-primary-600 text-white 
+           flex items-center justify-center text-sm font-bold;
+  }
+}
+
+/* 6. UTILITIES */
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .font-smooth { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+}
+
+/* 7. GLOBAL STYLES (NO LAYER) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-50;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f9fafb;
+}
+
+::selection {
+  @apply bg-primary-200 text-primary-900;
+}
+
+:focus-visible {
+  @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+}
+
+@media print {
+  .exam-paper {
+    background-image: none;
+    border: 1px solid #000;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* Tambahkan di akhir globals.css */
+
+/* ===== PRINT STYLES ===== */
+@media print {
+  body {
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  header,
+  footer,
+  .sticky {
+    position: relative !important;
+  }
+
+  .card {
+    break-inside: avoid;
+    box-shadow: none !important;
+    border: 1px solid #e5e7eb !important;
+  }
+
+  .progress-bar,
+  .progress-fill {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Force colors in print */
+  .bg-success-500,
+  .bg-success-100,
+  .bg-danger-500,
+  .bg-danger-100,
+  .bg-primary-500,
+  .bg-primary-100 {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
