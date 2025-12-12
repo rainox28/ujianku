@@ -12,13 +12,21 @@ interface Props {
   mataPelajaran: string;
   jenjang: string;
   kelas: number;
+  totalPG: number; // ✅ NEW: Pass actual count
+  totalEssay: number; // ✅ NEW: Pass actual count
 }
 
-export function ScoreCard({ ringkasan, mataPelajaran, jenjang, kelas }: Props) {
+export function ScoreCard({
+  ringkasan,
+  mataPelajaran,
+  jenjang,
+  kelas,
+  totalPG, // ✅ NEW
+  totalEssay, // ✅ NEW
+}: Props) {
   const isLulus = ringkasan.status === "LULUS";
   const scorePercentage = ringkasan.nilaiTotal;
 
-  // Determine grade
   const getGrade = (score: number) => {
     if (score >= 90)
       return { grade: "A", label: "Sangat Baik", color: "text-success-600" };
@@ -143,7 +151,7 @@ export function ScoreCard({ ringkasan, mataPelajaran, jenjang, kelas }: Props) {
           <div className="bg-gray-50 rounded-xl p-4 text-center">
             <p className="text-sm text-gray-500 mb-1">Pilihan Ganda</p>
             <p className="text-2xl font-bold text-gray-900">
-              {ringkasan.benarPG}/{EXAM_CONFIG.TOTAL_SOAL_PG}
+              {ringkasan.benarPG}/{totalPG} {/* ✅ FIX: use prop */}
             </p>
             <p className="text-sm text-gray-600">
               ({Math.round(ringkasan.nilaiPG)}%)

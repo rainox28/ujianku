@@ -76,20 +76,51 @@ export const JENJANG_OPTIONS: {
 ];
 
 export const EXAM_CONFIG = {
-  TOTAL_SOAL_PG: 30,
-  TOTAL_SOAL_ESSAY: 5,
-  DURASI_MENIT: 90,
+  // Configurable limits
+  MIN_SOAL_PG: 10,
+  MAX_SOAL_PG: 50,
+  DEFAULT_SOAL_PG: 30,
+
+  MIN_SOAL_ESSAY: 2,
+  MAX_SOAL_ESSAY: 10,
+  DEFAULT_SOAL_ESSAY: 5,
+
+  // Time calculation
+  DURASI_PER_SOAL_PG: 2, // 2 menit per soal PG
+  DURASI_PER_SOAL_ESSAY: 8, // 8 menit per soal essay
+  MIN_DURASI: 30, // minimal 30 menit
+  MAX_DURASI: 180, // maksimal 3 jam
+
+  // ✅ ADD THIS - Default duration for landing page display
+  DEFAULT_DURASI: 100, // 30 PG × 2 min + 5 Essay × 8 min = 100 min
+
+  // Scoring
   PASSING_GRADE: 70,
-  BOBOT_PG: 70, // 70% dari total nilai
-  BOBOT_ESSAY: 30, // 30% dari total nilai
-  NILAI_PER_SOAL_PG: 70 / 30, // ~2.33 per soal
-  MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
+  BOBOT_PG: 70,
+  BOBOT_ESSAY: 30,
+
+  // File upload
+  MAX_FILE_SIZE: 10 * 1024 * 1024,
   ALLOWED_FILE_TYPES: [
     "application/pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   ],
 };
+
+// Helper function untuk hitung durasi dinamis
+export function calculateDuration(
+  jumlahPG: number,
+  jumlahEssay: number
+): number {
+  const durasi =
+    jumlahPG * EXAM_CONFIG.DURASI_PER_SOAL_PG +
+    jumlahEssay * EXAM_CONFIG.DURASI_PER_SOAL_ESSAY;
+  return Math.max(
+    EXAM_CONFIG.MIN_DURASI,
+    Math.min(durasi, EXAM_CONFIG.MAX_DURASI)
+  );
+}
 
 export const STATUS_MESSAGES = {
   LULUS: {

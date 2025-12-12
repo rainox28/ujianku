@@ -502,11 +502,7 @@ export default function LandingPage() {
               {
                 step: "03",
                 title: "Kerjakan Soal",
-                description: `AI membuat ${
-                  EXAM_CONFIG.TOTAL_SOAL_PG + EXAM_CONFIG.TOTAL_SOAL_ESSAY
-                } soal dan kamu mengerjakan dalam ${
-                  EXAM_CONFIG.DURASI_MENIT
-                } menit`,
+                description: `AI membuat ${EXAM_CONFIG.MIN_SOAL_PG}-${EXAM_CONFIG.MAX_SOAL_PG} soal PG + ${EXAM_CONFIG.MIN_SOAL_ESSAY}-${EXAM_CONFIG.MAX_SOAL_ESSAY} essay sesuai pilihanmu`,
                 icon: Brain,
                 color: "from-pink-500 to-rose-500",
               },
@@ -759,10 +755,10 @@ export default function LandingPage() {
               <div className="flex flex-wrap justify-center gap-8 mt-12 pt-8 border-t border-white/20">
                 {[
                   {
-                    value: `${EXAM_CONFIG.TOTAL_SOAL_PG}+${EXAM_CONFIG.TOTAL_SOAL_ESSAY}`,
+                    value: `${EXAM_CONFIG.DEFAULT_SOAL_PG}+${EXAM_CONFIG.DEFAULT_SOAL_ESSAY}`,
                     label: "Soal",
                   },
-                  { value: `${EXAM_CONFIG.DURASI_MENIT}m`, label: "Durasi" },
+                  { value: `${EXAM_CONFIG.DEFAULT_DURASI}m`, label: "Durasi" },
                   { value: "AI", label: "Powered" },
                 ].map((stat, index) => (
                   <div key={index} className="text-center">

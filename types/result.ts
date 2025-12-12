@@ -35,6 +35,16 @@ export interface PembahasanEssay {
   konsepTerkait: string;
 }
 
+// types/result.ts - Update
+export interface HasilPenilaianEssay {
+  nomor: number;
+  nilai: number;
+  feedback: string;
+  konsepBenar?: string[];   // NEW
+  konsepKurang?: string[];  // NEW
+}
+
+// Full interface
 export interface ExamResult {
   penilaian: {
     pilihanGanda: HasilPenilaianPG[];
@@ -55,6 +65,8 @@ export interface ExamResult {
       semester: number;
       mataPelajaran: string;
       tanggalGenerate: string;
+      jumlahSoalPG?: number;
+      jumlahSoalEssay?: number;
     };
   };
   jawabanUser: {

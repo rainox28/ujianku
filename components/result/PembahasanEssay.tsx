@@ -3,7 +3,14 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, BookOpen, Lightbulb, Star } from "lucide-react";
+import {
+  ChevronDown,
+  BookOpen,
+  Lightbulb,
+  Star,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -16,6 +23,8 @@ interface Props {
   pembahasan: string;
   contohJawabanIdeal: string;
   konsepTerkait: string;
+  konsepBenar?: string[]; // NEW
+  konsepKurang?: string[]; // NEW
 }
 
 export function PembahasanEssay({
@@ -28,6 +37,8 @@ export function PembahasanEssay({
   pembahasan,
   contohJawabanIdeal,
   konsepTerkait,
+  konsepBenar = [],
+  konsepKurang = [],
 }: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -41,6 +52,15 @@ export function PembahasanEssay({
     if (score >= 80) return "border-l-success-500";
     if (score >= 60) return "border-l-warning-500";
     return "border-l-danger-500";
+  };
+
+  const getScoreLabel = (score: number) => {
+    if (score >= 90) return "Sangat Baik! 🌟";
+    if (score >= 80) return "Baik 👍";
+    if (score >= 70) return "Cukup Baik";
+    if (score >= 60) return "Cukup";
+    if (score >= 50) return "Perlu Perbaikan";
+    return "Perlu Belajar Lagi";
   };
 
   return (
@@ -57,12 +77,12 @@ export function PembahasanEssay({
         {/* Score Badge */}
         <div
           className={cn(
-            "flex-shrink-0 w-14 h-14 rounded-xl flex flex-col items-center justify-center",
+            "flex-shrink-0 w-16 h-16 rounded-xl flex flex-col items-center justify-center",
             getScoreColor(nilai)
           )}
         >
-          <span className="text-xl font-bold">{nilai}</span>
-          <span className="text-xs">/ 100</span>
+          <span className="text-2xl font-bold">{nilai}</span>
+          <span className="text-xs opacity-75">/ 100</span>
         </div>
 
         {/* Question Preview */}
@@ -72,6 +92,18 @@ export function PembahasanEssay({
               {nomorUrut}
             </span>
             <span className="badge-primary text-xs">Essay</span>
+            <span
+              className={cn(
+                "text-xs px-2 py-0.5 rounded-full",
+                nilai >= 80
+                  ? "bg-success-100 text-success-700"
+                  : nilai >= 60
+                  ? "bg-warning-100 text-warning-700"
+                  : "bg-danger-100 text-danger-700"
+              )}
+            >
+              {getScoreLabel(nilai)}
+            </span>
           </div>
           <p className="text-gray-800 font-medium line-clamp-2">{pertanyaan}</p>
 
@@ -112,6 +144,52 @@ export function PembahasanEssay({
                 </div>
               </div>
 
+              {/* ✅ NEW: Konsep yang Benar */}
+              {konsepBenar && konsepBenar.length > 0 && (
+                <div className="bg-success-50 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <CheckCircle2 className="w-5 h-5 text-success-600" />
+                    <h4 className="font-bold text-success-900">
+                      Yang Sudah Benar
+                    </h4>
+                  </div>
+                  <ul className="space-y-2">
+                    {konsepBenar.map((konsep, i) => (
+                      <li
+                        key={i}
+                        className="flex items-start gap-2 text-success-800"
+                      >
+                        <span className="text-success-500 mt-1">✓</span>
+                        <span>{konsep}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* ✅ NEW: Konsep yang Kurang */}
+              {konsepKurang && konsepKurang.length > 0 && (
+                <div className="bg-amber-50 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <AlertCircle className="w-5 h-5 text-amber-600" />
+                    <h4 className="font-bold text-amber-900">
+                      Yang Perlu Ditambahkan
+                    </h4>
+                  </div>
+                  <ul className="space-y-2">
+                    {konsepKurang.map((konsep, i) => (
+                      <li
+                        key={i}
+                        className="flex items-start gap-2 text-amber-800"
+                      >
+                        <span className="text-amber-500 mt-1">→</span>
+                        <span>{konsep}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {/* AI Feedback */}
               <div className="bg-primary-50 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
@@ -122,33 +200,37 @@ export function PembahasanEssay({
               </div>
 
               {/* Pembahasan */}
-              <div className="bg-blue-50 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <BookOpen className="w-5 h-5 text-blue-600" />
-                  <h4 className="font-bold text-blue-900">Pembahasan</h4>
+              {pembahasan && (
+                <div className="bg-blue-50 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <BookOpen className="w-5 h-5 text-blue-600" />
+                    <h4 className="font-bold text-blue-900">Pembahasan</h4>
+                  </div>
+                  <p className="text-gray-700 leading-relaxed">{pembahasan}</p>
                 </div>
-                <p className="text-gray-700 leading-relaxed">{pembahasan}</p>
-              </div>
+              )}
 
               {/* Contoh Jawaban Ideal */}
-              <div className="bg-success-50 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-lg">✨</span>
-                  <h4 className="font-bold text-success-900">
-                    Contoh Jawaban Ideal
-                  </h4>
+              {contohJawabanIdeal && (
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-lg">✨</span>
+                    <h4 className="font-bold text-emerald-900">
+                      Contoh Jawaban Ideal
+                    </h4>
+                  </div>
+                  <p className="text-gray-700 leading-relaxed font-serif">
+                    {contohJawabanIdeal}
+                  </p>
                 </div>
-                <p className="text-gray-700 leading-relaxed font-serif">
-                  {contohJawabanIdeal}
-                </p>
-              </div>
+              )}
 
               {/* Konsep Terkait */}
               {konsepTerkait && (
-                <div className="bg-amber-50 rounded-xl p-4">
+                <div className="bg-gray-50 rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Lightbulb className="w-5 h-5 text-amber-600" />
-                    <h4 className="font-bold text-amber-900">Konsep Terkait</h4>
+                    <Lightbulb className="w-5 h-5 text-gray-600" />
+                    <h4 className="font-bold text-gray-900">Konsep Terkait</h4>
                   </div>
                   <p className="text-gray-700 leading-relaxed">
                     {konsepTerkait}

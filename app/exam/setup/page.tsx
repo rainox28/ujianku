@@ -19,6 +19,8 @@ import {
   BookMarked,
   Brain,
   Loader2,
+  Settings,
+  Clock,
 } from "lucide-react";
 import { Jenjang, Kelas, Semester, ExamSetup } from "@/types";
 import {
@@ -26,23 +28,32 @@ import {
   KELAS_BY_JENJANG,
   JENJANG_OPTIONS,
   EXAM_CONFIG,
+  calculateDuration,
 } from "@/lib/constants";
 import { cn, getKelasSuffix, getSemesterLabel } from "@/lib/utils";
 import { useGenerateExam } from "@/hooks/useGenerateExam";
+import { QuestionCountSelector } from "@/components/exam/QuestionCountSelector";
 import Image from "next/image";
 
-// ✅ Loading Component inline
-function GeneratingLoader({ step }: { step: number }) {
+// ✅ Loading Component
+function GeneratingLoader({
+  step,
+  totalSteps,
+}: {
+  step: number;
+  totalSteps: number;
+}) {
   const steps = [
-    {
-      icon: Brain,
-      text: "AI sedang menganalisis kurikulum...",
-      done: step > 0,
-    },
-    { icon: FileText, text: "Membuat soal pilihan ganda...", done: step > 1 },
-    { icon: Sparkles, text: "Membuat soal essay...", done: step > 2 },
-    { icon: CheckCircle, text: "Memvalidasi soal...", done: step > 3 },
+    { icon: Brain, text: "AI sedang menganalisis kurikulum..." },
+    { icon: FileText, text: "Membuat soal pilihan ganda (Batch 1)..." },
+    { icon: FileText, text: "Membuat soal pilihan ganda (Batch 2)..." },
+    { icon: FileText, text: "Membuat soal pilihan ganda (Batch 3)..." },
+    { icon: Sparkles, text: "Membuat soal essay..." },
+    { icon: CheckCircle, text: "Memvalidasi dan menggabungkan soal..." },
   ];
+
+  // Only show relevant steps based on totalSteps
+  const displaySteps = steps.slice(0, totalSteps);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 p-4">
@@ -59,20 +70,19 @@ function GeneratingLoader({ step }: { step: number }) {
           </div>
         </motion.div>
 
-        {/* Title */}
         <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
-          AI Sedang Bekerja
+          3 AI Sedang Bekerja Paralel
         </h2>
         <p className="text-gray-600 mb-8">
-          Membuat soal ujian khusus untuk kamu...
+          Membuat soal ujian khusus untuk kamu dengan kecepatan maksimal...
         </p>
 
         {/* Progress Steps */}
         <div className="space-y-3 text-left">
-          {steps.map((s, index) => {
+          {displaySteps.map((s, index) => {
             const Icon = s.icon;
             const isActive = index === step;
-            const isComplete = s.done;
+            const isComplete = index < step;
 
             return (
               <motion.div
@@ -119,14 +129,13 @@ function GeneratingLoader({ step }: { step: number }) {
           })}
         </div>
 
-        {/* Tip */}
         <motion.p
           className="mt-8 text-sm text-gray-500 italic"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1 }}
         >
-          💡 Proses ini membutuhkan waktu sekitar 10-30 detik
+          💡 3 AI bekerja bersamaan = 3x lebih cepat!
         </motion.p>
       </div>
     </div>
@@ -168,20 +177,27 @@ export default function ExamSetupPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [generatingStep, setGeneratingStep] = useState(0);
+  const TOTAL_STEPS = 5; // Now 5 steps instead of 4
 
   const [formData, setFormData] = useState<ExamSetup>({
     jenjang: "SMP",
     kelas: 7,
     semester: 1,
     mataPelajaran: "",
+    jumlahSoalPG: EXAM_CONFIG.DEFAULT_SOAL_PG,
+    jumlahSoalEssay: EXAM_CONFIG.DEFAULT_SOAL_ESSAY,
     uploadedFile: null,
   });
 
-  // ✅ Use the hook
   const { isLoading, error, generateExam, reset } = useGenerateExam();
 
   const availableMapel = MATA_PELAJARAN.filter((m) =>
     m.tersediaUntuk.includes(formData.jenjang)
+  );
+
+  const estimatedDuration = calculateDuration(
+    formData.jumlahSoalPG,
+    formData.jumlahSoalEssay
   );
 
   const handleJenjangChange = (jenjang: Jenjang) => {
@@ -197,11 +213,7 @@ export default function ExamSetupPage() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const validTypes = [
-        "application/pdf",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-      ];
+      const validTypes = EXAM_CONFIG.ALLOWED_FILE_TYPES;
       if (validTypes.includes(file.type)) {
         setFormData((prev) => ({ ...prev, uploadedFile: file }));
       } else {
@@ -214,58 +226,66 @@ export default function ExamSetupPage() {
     setFormData((prev) => ({ ...prev, uploadedFile: null }));
   };
 
-  // ✅ Handle Submit with Loading
-
-const handleSubmit = async () => {
-  if (!formData.mataPelajaran) {
-    alert("Pilih mata pelajaran terlebih dahulu");
-    return;
-  }
-
-  // ✅ CLEAR OLD DATA sebelum generate ujian baru
-  sessionStorage.removeItem("examData");
-  sessionStorage.removeItem("examAnswers");
-  sessionStorage.removeItem("examResult");
-  sessionStorage.removeItem("examStartTime");
-  sessionStorage.removeItem("examSetup");
-
-  setGeneratingStep(0);
-  const stepInterval = setInterval(() => {
-    setGeneratingStep((prev) => (prev < 3 ? prev + 1 : prev));
-  }, 3000);
-
-  try {
-    const result = await generateExam({
-      jenjang: formData.jenjang,
-      kelas: formData.kelas,
-      semester: formData.semester,
-      mataPelajaran: formData.mataPelajaran,
-    });
-
-    clearInterval(stepInterval);
-
-    if (result) {
-      // Save fresh data
-      sessionStorage.setItem("examData", JSON.stringify(result));
-      sessionStorage.setItem(
-        "examSetup",
-        JSON.stringify({
-          jenjang: formData.jenjang,
-          kelas: formData.kelas,
-          semester: formData.semester,
-          mataPelajaran: formData.mataPelajaran,
-        })
-      );
-      sessionStorage.setItem("examStartTime", new Date().toISOString());
-
-      window.location.href = "/exam/start";
+  const handleSubmit = async () => {
+    if (!formData.mataPelajaran) {
+      alert("Pilih mata pelajaran terlebih dahulu");
+      return;
     }
-  } catch (err) {
-    clearInterval(stepInterval);
-    setGeneratingStep(0);
-  }
-};
 
+    // Clear old data
+    sessionStorage.removeItem("examData");
+    sessionStorage.removeItem("examAnswers");
+    sessionStorage.removeItem("examResult");
+    sessionStorage.removeItem("examStartTime");
+    sessionStorage.removeItem("examSetup");
+
+    setGeneratingStep(0);
+
+    // Calculate loading steps based on PG count
+    const pgBatches = Math.ceil(formData.jumlahSoalPG / 10);
+    const totalLoadingSteps = 1 + pgBatches + 1 + 1; // analyze + pg batches + essay + validate
+
+    const stepInterval = setInterval(() => {
+      setGeneratingStep((prev) =>
+        prev < totalLoadingSteps - 1 ? prev + 1 : prev
+      );
+    }, 2500);
+
+    try {
+      const result = await generateExam({
+        jenjang: formData.jenjang,
+        kelas: formData.kelas,
+        semester: formData.semester,
+        mataPelajaran: formData.mataPelajaran,
+        jumlahSoalPG: formData.jumlahSoalPG,
+        jumlahSoalEssay: formData.jumlahSoalEssay,
+      });
+
+      clearInterval(stepInterval);
+
+      if (result) {
+        sessionStorage.setItem("examData", JSON.stringify(result));
+        sessionStorage.setItem(
+          "examSetup",
+          JSON.stringify({
+            jenjang: formData.jenjang,
+            kelas: formData.kelas,
+            semester: formData.semester,
+            mataPelajaran: formData.mataPelajaran,
+            jumlahSoalPG: formData.jumlahSoalPG,
+            jumlahSoalEssay: formData.jumlahSoalEssay,
+            durasi: estimatedDuration,
+          })
+        );
+        sessionStorage.setItem("examStartTime", new Date().toISOString());
+
+        window.location.href = "/exam/start";
+      }
+    } catch (err) {
+      clearInterval(stepInterval);
+      setGeneratingStep(0);
+    }
+  };
 
   const handleRetry = () => {
     reset();
@@ -280,22 +300,40 @@ const handleSubmit = async () => {
         return !!formData.kelas && !!formData.semester;
       case 3:
         return !!formData.mataPelajaran;
+      case 4:
+        return (
+          formData.jumlahSoalPG >= EXAM_CONFIG.MIN_SOAL_PG &&
+          formData.jumlahSoalEssay >= EXAM_CONFIG.MIN_SOAL_ESSAY
+        );
+      case 5:
+        return true;
       default:
         return false;
     }
   };
 
-  // ✅ Show Loading Screen
+  // Show Loading Screen
   if (isLoading) {
-    return <GeneratingLoader step={generatingStep} />;
+    const pgBatches = Math.ceil(formData.jumlahSoalPG / 10);
+    return (
+      <GeneratingLoader step={generatingStep} totalSteps={1 + pgBatches + 2} />
+    );
   }
 
-  // ✅ Show Error Screen
+  // Show Error Screen
   if (error) {
     return <ErrorDisplay error={error} onRetry={handleRetry} />;
   }
 
-  // Main Form UI
+  const formatDuration = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0) {
+      return `${hours} jam ${mins > 0 ? `${mins} menit` : ""}`;
+    }
+    return `${mins} menit`;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       {/* Header */}
@@ -310,10 +348,6 @@ const handleSubmit = async () => {
               <span className="hidden sm:inline">Kembali</span>
             </Link>
             <div className="flex items-center gap-2">
-              {/* <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
-                <BookOpen className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold gradient-text">UjianKu</span> */}
               <Image
                 src="/images/17.png"
                 alt="Logo Ujian Digital AI"
@@ -331,17 +365,17 @@ const handleSubmit = async () => {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-600">
-              Langkah {step} dari 4
+              Langkah {step} dari {TOTAL_STEPS}
             </span>
             <span className="text-sm text-gray-500">
-              {Math.round((step / 4) * 100)}% selesai
+              {Math.round((step / TOTAL_STEPS) * 100)}% selesai
             </span>
           </div>
           <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
             <motion.div
               className="h-full bg-gradient-to-r from-primary-500 to-primary-600 rounded-full"
               initial={{ width: 0 }}
-              animate={{ width: `${(step / 4) * 100}%` }}
+              animate={{ width: `${(step / TOTAL_STEPS) * 100}%` }}
               transition={{ duration: 0.3 }}
             />
           </div>
@@ -538,7 +572,7 @@ const handleSubmit = async () => {
             </motion.div>
           )}
 
-          {/* Step 4: Upload Materi & Konfirmasi */}
+          {/* Step 4: Pilih Jumlah Soal (NEW) */}
           {step === 4 && (
             <motion.div
               key="step4"
@@ -548,9 +582,40 @@ const handleSubmit = async () => {
               transition={{ duration: 0.3 }}
             >
               <div className="text-center mb-8">
-                {/* <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-2xl mb-4">
-                  <Sparkles className="w-8 h-8 text-primary-600" />
-                </div> */}
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-2xl mb-4">
+                  <Settings className="w-8 h-8 text-primary-600" />
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                  Atur Jumlah Soal
+                </h1>
+                <p className="text-gray-600">
+                  Tentukan berapa banyak soal yang ingin kamu kerjakan
+                </p>
+              </div>
+
+              <QuestionCountSelector
+                jumlahPG={formData.jumlahSoalPG}
+                jumlahEssay={formData.jumlahSoalEssay}
+                onChangePG={(value) =>
+                  setFormData((prev) => ({ ...prev, jumlahSoalPG: value }))
+                }
+                onChangeEssay={(value) =>
+                  setFormData((prev) => ({ ...prev, jumlahSoalEssay: value }))
+                }
+              />
+            </motion.div>
+          )}
+
+          {/* Step 5: Upload Materi & Konfirmasi */}
+          {step === 5 && (
+            <motion.div
+              key="step5"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="text-center mb-8">
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                   Siap Memulai Ujian!
                 </h1>
@@ -610,8 +675,21 @@ const handleSubmit = async () => {
                       <div>
                         <p className="text-sm text-gray-500">Jumlah Soal</p>
                         <p className="font-medium text-gray-900">
-                          {EXAM_CONFIG.TOTAL_SOAL_PG} PG +{" "}
-                          {EXAM_CONFIG.TOTAL_SOAL_ESSAY} Essay
+                          {formData.jumlahSoalPG} PG +{" "}
+                          {formData.jumlahSoalEssay} Essay
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 sm:col-span-2">
+                      <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-amber-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">
+                          Waktu Pengerjaan
+                        </p>
+                        <p className="font-medium text-gray-900">
+                          {formatDuration(estimatedDuration)}
                         </p>
                       </div>
                     </div>
@@ -683,11 +761,11 @@ const handleSubmit = async () => {
                   <Sparkles className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="font-medium text-blue-900 mb-1">
-                      AI akan membuat soal untuk kamu
+                      3 AI akan membuat soal secara paralel
                     </p>
                     <p className="text-blue-700">
-                      Waktu pengerjaan {EXAM_CONFIG.DURASI_MENIT} menit. Proses
-                      generate membutuhkan 10-30 detik.
+                      Proses generate lebih cepat dengan teknologi parallel
+                      processing. Estimasi waktu: 10-20 detik.
                     </p>
                   </div>
                 </div>
@@ -706,9 +784,9 @@ const handleSubmit = async () => {
             Sebelumnya
           </button>
 
-          {step < 4 ? (
+          {step < TOTAL_STEPS ? (
             <button
-              onClick={() => setStep((prev) => Math.min(4, prev + 1))}
+              onClick={() => setStep((prev) => Math.min(TOTAL_STEPS, prev + 1))}
               disabled={!canProceed()}
               className="btn-primary"
             >

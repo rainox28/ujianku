@@ -22,8 +22,18 @@ export interface ExamSetup {
   kelas: Kelas;
   semester: Semester;
   mataPelajaran: string;
-  uploadedFile?: File | null;
-  uploadedFileUrl?: string;
+  jumlahSoalPG: number; // NEW
+  jumlahSoalEssay: number; // NEW
+  uploadedFile: File | null;
+}
+
+export interface ExamConfig {
+  MIN_SOAL_PG: number;
+  MAX_SOAL_PG: number;
+  MIN_SOAL_ESSAY: number;
+  MAX_SOAL_ESSAY: number;
+  DURASI_PER_SOAL_PG: number; // menit per soal
+  DURASI_PER_SOAL_ESSAY: number; // menit per soal
 }
 
 export interface SoalPilihanGanda {

@@ -1,4 +1,4 @@
-// app/exam/result/page.tsx
+// app/exam/result/page.tsx - Full updated file
 "use client";
 
 import { useEffect, useState } from "react";
@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ExamResult } from "@/types/result";
-import { EXAM_CONFIG } from "@/lib/constants";
 import { ScoreCard } from "@/components/result/ScoreCard";
 import { StatisticsCard } from "@/components/result/StatisticsCard";
 import { PembahasanPG } from "@/components/result/PembahasanPG";
@@ -68,6 +67,10 @@ export default function ExamResultPage() {
 
   const { penilaian, pembahasan, examData, jawabanUser } = result;
   const { ringkasan } = penilaian;
+  
+  // ✅ Get actual counts from exam data
+  const totalPG = examData.pilihanGanda.length;
+  const totalEssay = examData.essay.length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
@@ -84,9 +87,6 @@ export default function ExamResultPage() {
             </Link>
 
             <div className="flex items-center gap-2 w-full justify-center">
-              {/* <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
-                <BookOpen className="w-5 h-5 text-white" />
-              </div> */}
               <span className="font-bold gradient-text flex items-center gap-2">Hasil 
                 <Image
                   src="/images/17.png"
@@ -141,12 +141,14 @@ export default function ExamResultPage() {
                 mataPelajaran={examData.metadata.mataPelajaran}
                 jenjang={examData.metadata.jenjang}
                 kelas={examData.metadata.kelas}
+                totalPG={totalPG}        // ✅ Pass actual count
+                totalEssay={totalEssay}  // ✅ Pass actual count
               />
 
               <StatisticsCard
                 benarPG={ringkasan.benarPG}
                 salahPG={ringkasan.salahPG}
-                totalPG={EXAM_CONFIG.TOTAL_SOAL_PG}
+                totalPG={totalPG}  // ✅ Use actual count
                 essayScores={penilaian.essay.map((e) => e.nilai)}
               />
 
@@ -167,20 +169,28 @@ export default function ExamResultPage() {
                 className="card p-6"
               >
                 <h3 className="font-bold text-gray-900 mb-4">
-                  Waktu Pengerjaan
+                  Info Ujian
                 </h3>
-                <div className="text-center">
-                  <p className="text-sm text-gray-500">Tanggal Ujian</p>
-                  <p className="font-medium text-gray-900">
-                    {new Date(
-                      examData.metadata.tanggalGenerate
-                    ).toLocaleDateString("id-ID", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </p>
+                <div className="space-y-3">
+                  <div className="text-center">
+                    <p className="text-sm text-gray-500">Tanggal Ujian</p>
+                    <p className="font-medium text-gray-900">
+                      {new Date(
+                        examData.metadata.tanggalGenerate
+                      ).toLocaleDateString("id-ID", {
+                        weekday: "long",
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </p>
+                  </div>
+                  <div className="text-center pt-3 border-t border-gray-100">
+                    <p className="text-sm text-gray-500">Jumlah Soal</p>
+                    <p className="font-medium text-gray-900">
+                      {totalPG} PG + {totalEssay} Essay
+                    </p>
+                  </div>
                 </div>
               </motion.div>
             </div>
@@ -197,8 +207,7 @@ export default function ExamResultPage() {
                   Pembahasan Pilihan Ganda
                 </h2>
                 <p className="text-gray-500">
-                  {ringkasan.benarPG} benar dari {EXAM_CONFIG.TOTAL_SOAL_PG}{" "}
-                  soal
+                  {ringkasan.benarPG} benar dari {totalPG} soal  {/* ✅ FIX */}
                 </p>
               </div>
               <button
@@ -297,16 +306,18 @@ export default function ExamResultPage() {
                   <PembahasanEssay
                     key={soal.nomor}
                     nomor={soal.nomor}
-                    nomorUrut={EXAM_CONFIG.TOTAL_SOAL_PG + index + 1}
+                    nomorUrut={totalPG + index + 1} 
                     pertanyaan={soal.pertanyaan}
                     jawabanUser={jawabanUser.essay[soal.nomor] || ""}
                     nilai={hasil?.nilai || 0}
                     feedback={hasil?.feedback || ""}
                     pembahasan={pembahasanData?.pembahasan || ""}
                     contohJawabanIdeal={
-                      pembahasanData?.contohJawabanIdeal || ""
+                      pembahasanData?.contohJawabanIdeal || soal.kunciJawaban || ""
                     }
                     konsepTerkait={pembahasanData?.konsepTerkait || ""}
+                    konsepBenar={hasil?.konsepBenar || []}
+                    konsepKurang={hasil?.konsepKurang || []}
                   />
                 );
               })}

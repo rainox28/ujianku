@@ -15,7 +15,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { EXAM_CONFIG } from "@/lib/constants";
+import { EXAM_CONFIG, calculateDuration } from "@/lib/constants";
 import { useTimer } from "@/hooks/useTimer";
 import { useExamStore } from "@/hooks/useExamStore";
 import { QuestionPG } from "@/components/exam/QuestionPG";
@@ -24,6 +24,37 @@ import { ExamNavigation } from "@/components/exam/ExamNavigation";
 import { SubmitModal } from "@/components/exam/SubmitModal";
 import { TimeUpModal } from "@/components/exam/TimeUpModal";
 import Image from "next/image";
+
+// ✅ Helper to get duration from storage
+function getExamDuration(): number {
+  if (typeof window === "undefined") return 90;
+
+  try {
+    const examSetupStr = sessionStorage.getItem("examSetup");
+    if (examSetupStr) {
+      const examSetup = JSON.parse(examSetupStr);
+      if (examSetup.durasi) return examSetup.durasi;
+      if (examSetup.jumlahSoalPG && examSetup.jumlahSoalEssay) {
+        return calculateDuration(
+          examSetup.jumlahSoalPG,
+          examSetup.jumlahSoalEssay
+        );
+      }
+    }
+
+    const examDataStr = sessionStorage.getItem("examData");
+    if (examDataStr) {
+      const data = JSON.parse(examDataStr);
+      const pgCount = data.pilihanGanda?.length || EXAM_CONFIG.DEFAULT_SOAL_PG;
+      const essayCount = data.essay?.length || EXAM_CONFIG.DEFAULT_SOAL_ESSAY;
+      return calculateDuration(pgCount, essayCount);
+    }
+  } catch (e) {
+    console.log("Error getting duration, using default");
+  }
+
+  return 90; // Default fallback
+}
 
 export default function ExamStartPage() {
   const router = useRouter();
@@ -52,20 +83,45 @@ export default function ExamStartPage() {
     setShowTimeUpModal(true);
   }, []);
 
-  const { formattedTime, isWarning, isDanger } = useTimer({
-    initialMinutes: EXAM_CONFIG.DURASI_MENIT,
+  // ✅ Get duration (will be used after load)
+  const [examDuration, setExamDuration] = useState<number>(90);
+
+  // ✅ Timer - starts when isLoaded becomes true
+  const {
+    formattedTime,
+    isWarning,
+    isDanger,
+    start: startTimer,
+  } = useTimer({
+    initialMinutes: examDuration,
     onTimeUp: handleTimeUp,
-    autoStart: true,
+    autoStart: isLoaded,
   });
 
+  // ✅ Load exam on mount
   useEffect(() => {
     const loaded = loadExam();
     if (!loaded) {
       router.replace("/exam/setup");
       return;
     }
+
+    // Get and set duration
+    const duration = getExamDuration();
+    setExamDuration(duration);
+    console.log(`[Timer] Duration set to ${duration} minutes`);
+
+    // Mark as loaded (this will trigger timer start via autoStart)
     setIsLoaded(true);
   }, [loadExam, router]);
+
+  // ✅ Start timer when loaded and duration is set
+  useEffect(() => {
+    if (isLoaded && examDuration > 0) {
+      console.log(`[Timer] Starting with ${examDuration} minutes`);
+      startTimer();
+    }
+  }, [isLoaded, examDuration, startTimer]);
 
   useEffect(() => {
     const handleScroll = () => setShowScrollTop(window.scrollY > 500);
@@ -103,6 +159,7 @@ export default function ExamStartPage() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [isSubmitting]);
 
+  // ✅ Show loading until exam is loaded
   if (!isLoaded || !examData) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -234,7 +291,6 @@ export default function ExamStartPage() {
                 {currentSection === "pg" ? (
                   <>
                     {examData.pilihanGanda.map((soal) => (
-                      /* Wrapper untuk mengatur typography soal di level page juga */
                       <div
                         key={soal.nomor}
                         className="scroll-mt-28"
@@ -324,9 +380,8 @@ export default function ExamStartPage() {
                   jawabanEssay={jawabanEssay}
                   currentSection={currentSection}
                   onSectionChange={setCurrentSection}
-                  onNavigate={(id) => {
-                    // Opsional: Scroll ke soal tertentu
-                    const el = document.getElementById(`q-${id}`);
+                  onNavigate={(type, nomor) => {
+                    const el = document.getElementById(`q-${nomor}`);
                     if (el)
                       el.scrollIntoView({
                         behavior: "smooth",
@@ -375,9 +430,9 @@ export default function ExamStartPage() {
                   setShowMobileNav(false);
                   scrollToTop();
                 }}
-                onNavigate={(id) => {
+                onNavigate={(type, nomor) => {
                   setShowMobileNav(false);
-                  const el = document.getElementById(`q-${id}`);
+                  const el = document.getElementById(`q-${nomor}`);
                   if (el)
                     setTimeout(
                       () =>

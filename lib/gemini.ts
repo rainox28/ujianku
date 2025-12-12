@@ -84,6 +84,8 @@ export interface GeneratedExam {
     semester: number;
     mataPelajaran: string;
     tanggalGenerate: string;
+    jumlahSoalPG?: number; // NEW
+    jumlahSoalEssay?: number; // NEW
   };
 }
 
@@ -105,4 +107,5 @@ export interface GeneratedSoalEssay {
   pertanyaan: string;
   kunciJawaban: string;
   poinPenilaian: string[];
+  variasiJawabanBenar?: string[]; // NEW - untuk semantic grading
 }

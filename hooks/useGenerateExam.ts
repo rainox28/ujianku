@@ -9,6 +9,8 @@ interface ExamSetupData {
   kelas: number;
   semester: number;
   mataPelajaran: string;
+  jumlahSoalPG?: number; // NEW
+  jumlahSoalEssay?: number; // NEW
   materiTambahan?: string;
 }
 
@@ -33,7 +35,12 @@ export function useGenerateExam(): UseGenerateExamReturn {
     setRetryAfter(null);
 
     try {
-      console.log("Starting exam generation...");
+      console.log("Starting parallel exam generation...");
+      console.log(
+        `Target: ${data.jumlahSoalPG || 30} PG + ${
+          data.jumlahSoalEssay || 5
+        } Essay`
+      );
 
       const response = await fetch("/api/generate-questions", {
         method: "POST",
@@ -46,7 +53,6 @@ export function useGenerateExam(): UseGenerateExamReturn {
       const result = await response.json();
 
       if (!response.ok) {
-        // Handle rate limit specifically
         if (response.status === 429) {
           setRetryAfter(result.retryAfter || 60);
           throw new Error(
@@ -57,6 +63,10 @@ export function useGenerateExam(): UseGenerateExamReturn {
       }
 
       console.log("Exam generated successfully");
+      console.log(
+        `Result: ${result.data.pilihanGanda.length} PG + ${result.data.essay.length} Essay`
+      );
+
       setExamData(result.data);
       return result.data;
     } catch (err: any) {
