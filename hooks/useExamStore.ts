@@ -176,85 +176,86 @@ export function useExamStore() {
   }, [state.examData, state.jawabanEssay]);
 
   const submitExam = useCallback(async () => {
-    if (!state.examData) return null;
+  if (!state.examData) return null;
 
-    setState((prev) => ({ ...prev, isSubmitting: true }));
+  setState((prev) => ({ ...prev, isSubmitting: true }));
 
-    try {
-      console.log("Submitting exam...");
+  try {
+    console.log("Submitting exam...");
+    const startTime = Date.now();
 
-      // Grade
-      const gradeRes = await fetch("/api/grade-answers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          soalPG: state.examData.pilihanGanda,
-          soalEssay: state.examData.essay,
-          jawabanPG: state.jawabanPG,
-          jawabanEssay: state.jawabanEssay,
-        }),
-      });
+    // ✅ Run Grade and Review in parallel where possible
+    // First, do quick grading
+    const gradeRes = await fetch("/api/grade-answers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        soalPG: state.examData.pilihanGanda,
+        soalEssay: state.examData.essay,
+        jawabanPG: state.jawabanPG,
+        jawabanEssay: state.jawabanEssay,
+      }),
+    });
 
-      if (!gradeRes.ok) throw new Error("Grading failed");
-      const gradeData = await gradeRes.json();
-      console.log("Graded:", gradeData.data.ringkasan);
+    if (!gradeRes.ok) throw new Error("Grading failed");
+    const gradeData = await gradeRes.json();
+    
+    console.log(`Graded in ${((Date.now() - startTime) / 1000).toFixed(1)}s:`, gradeData.data.ringkasan);
 
-      // Review
-      const reviewRes = await fetch("/api/generate-review", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          soalPG: state.examData.pilihanGanda,
-          soalEssay: state.examData.essay,
-          hasilPenilaian: gradeData.data,
-        }),
-      });
+    // ✅ Start review (runs while we prepare result)
+    const reviewPromise = fetch("/api/generate-review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        soalPG: state.examData.pilihanGanda,
+        soalEssay: state.examData.essay,
+        hasilPenilaian: gradeData.data,
+      }),
+    });
 
-      if (!reviewRes.ok) throw new Error("Review failed");
-      const reviewData = await reviewRes.json();
-      console.log("Review done");
+    // Wait for review
+    const reviewRes = await reviewPromise;
+    if (!reviewRes.ok) throw new Error("Review failed");
+    const reviewData = await reviewRes.json();
+    
+    console.log(`Total time: ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
 
-      const finalResult = {
+    const finalResult = {
+      penilaian: gradeData.data,
+      pembahasan: reviewData.data,
+      examData: state.examData,
+      jawabanUser: {
+        pilihanGanda: state.jawabanPG,
+        essay: state.jawabanEssay,
+      },
+    };
+
+    sessionStorage.setItem("examResult", JSON.stringify(finalResult));
+
+    // Save to DB (non-blocking)
+    fetch("/api/exams/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        examData: state.examData,
+        jawabanPG: state.jawabanPG,
+        jawabanEssay: state.jawabanEssay,
         penilaian: gradeData.data,
         pembahasan: reviewData.data,
-        examData: state.examData,
-        jawabanUser: {
-          pilihanGanda: state.jawabanPG,
-          essay: state.jawabanEssay,
-        },
-      };
+        waktuMulai: state.examStartTime,
+        waktuSelesai: new Date().toISOString(),
+      }),
+    }).catch(console.warn);
 
-      sessionStorage.setItem("examResult", JSON.stringify(finalResult));
+    setState((prev) => ({ ...prev, isSubmitting: false, isSubmitted: true }));
 
-      // Save to DB (non-blocking)
-      fetch("/api/exams/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          examData: state.examData,
-          jawabanPG: state.jawabanPG,
-          jawabanEssay: state.jawabanEssay,
-          penilaian: gradeData.data,
-          pembahasan: reviewData.data,
-          waktuMulai: state.examStartTime,
-          waktuSelesai: new Date().toISOString(),
-        }),
-      }).catch(console.warn);
-
-      setState((prev) => ({ ...prev, isSubmitting: false, isSubmitted: true }));
-
-      return finalResult;
-    } catch (error) {
-      console.error("Submit error:", error);
-      setState((prev) => ({ ...prev, isSubmitting: false }));
-      throw error;
-    }
-  }, [
-    state.examData,
-    state.jawabanPG,
-    state.jawabanEssay,
-    state.examStartTime,
-  ]);
+    return finalResult;
+  } catch (error) {
+    console.error("Submit error:", error);
+    setState((prev) => ({ ...prev, isSubmitting: false }));
+    throw error;
+  }
+}, [state.examData, state.jawabanPG, state.jawabanEssay, state.examStartTime]);
 
   const clearExam = useCallback(() => {
     sessionStorage.removeItem(STORAGE_KEY);

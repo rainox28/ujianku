@@ -822,7 +822,7 @@ export default function LandingPage() {
             </div>
 
             <p className="text-gray-400 text-sm font-body">
-              © 2024 UjianKu. All rights reserved.
+              © 2025 UjianKu. All rights reserved.
             </p>
           </div>
         </div>

@@ -11,89 +11,141 @@ interface RequestBody {
   hasilPenilaian: any;
 }
 
-// Better JSON parser
 function parseJSON(text: string): any {
-  let clean = text
+  const clean = text
     .replace(/```json\s*/gi, "")
     .replace(/```\s*/gi, "")
     .trim();
-
   try {
     return JSON.parse(clean);
-  } catch (e) {}
-
-  const start = clean.indexOf("{");
-  const end = clean.lastIndexOf("}");
-  if (start !== -1 && end > start) {
-    let jsonStr = clean.substring(start, end + 1);
-    jsonStr = jsonStr.replace(/,\s*}/g, "}").replace(/,\s*]/g, "]");
-    return JSON.parse(jsonStr);
+  } catch {
+    const start = clean.indexOf("{");
+    const end = clean.lastIndexOf("}");
+    if (start !== -1 && end > start) {
+      return JSON.parse(clean.substring(start, end + 1));
+    }
+    // Try array
+    const arrStart = clean.indexOf("[");
+    const arrEnd = clean.lastIndexOf("]");
+    if (arrStart !== -1 && arrEnd > arrStart) {
+      return JSON.parse(clean.substring(arrStart, arrEnd + 1));
+    }
+    throw new Error("Cannot parse");
   }
-
-  throw new Error("Cannot parse JSON");
 }
 
-// Fallback review generator
-function generateLocalReview(
-  soalPG: any[],
+// ✅ Generate pembahasan for batch of PG (5 at a time)
+async function generatePGBatchReview(
+  soalBatch: any[],
+  hasilBatch: any[]
+): Promise<any[]> {
+  try {
+    const genAI = createGeminiClient();
+    const model = genAI.getGenerativeModel({
+      model: MODEL_CONFIG.pembahasanGenerator.model,
+      generationConfig: {
+        temperature: 0.5,
+        maxOutputTokens: 2048,
+      },
+    });
+
+    const soalList = soalBatch
+      .map((s, i) => {
+        const h = hasilBatch[i];
+        return `${s.nomor}.[${h?.benar ? "✓" : "✗"}] ${s.pertanyaan.substring(
+          0,
+          80
+        )} → Jawaban: ${s.jawabanBenar}`;
+      })
+      .join("\n");
+
+    const prompt = `Buat pembahasan singkat untuk soal-soal ini:
+${soalList}
+
+Output JSON array: [{"nomor":1,"pembahasan":"...","konsepTerkait":"...","tips":"..."}]`;
+
+    const result = await model.generateContent(prompt);
+    const data = parseJSON(result.response.text());
+    return Array.isArray(data) ? data : data.pilihanGanda || [];
+  } catch {
+    // Fallback
+    return soalBatch.map((s, i) => ({
+      nomor: s.nomor,
+      pembahasan: hasilBatch[i]?.benar
+        ? `Benar! Jawaban ${s.jawabanBenar} tepat.`
+        : `Jawaban yang benar adalah ${s.jawabanBenar}.`,
+      konsepTerkait: "Pelajari materi terkait",
+      tips: hasilBatch[i]?.benar ? "Bagus!" : "Pelajari lagi",
+    }));
+  }
+}
+
+// ✅ Generate pembahasan for essays
+async function generateEssayReview(
   soalEssay: any[],
-  hasilPenilaian: any
-) {
-  const pilihanGanda = soalPG.map((soal, index) => {
-    const hasil = hasilPenilaian.pilihanGanda?.[index];
-    const benar = hasil?.benar ?? false;
-    return {
-      nomor: soal.nomor,
-      pembahasan: benar
-        ? `Jawaban ${soal.jawabanBenar} adalah benar. ${
-            soal.opsi[soal.jawabanBenar]
-          }.`
-        : `Jawaban yang benar adalah ${soal.jawabanBenar}: ${
-            soal.opsi[soal.jawabanBenar]
-          }.`,
-      konsepTerkait: "Pelajari materi terkait di buku paket.",
-      tips: benar ? "Pertahankan pemahamanmu!" : "Pelajari lagi konsep ini.",
-    };
-  });
+  hasilEssay: any[]
+): Promise<any[]> {
+  try {
+    const genAI = createGeminiClient();
+    const model = genAI.getGenerativeModel({
+      model: MODEL_CONFIG.pembahasanGenerator.model,
+      generationConfig: {
+        temperature: 0.5,
+        maxOutputTokens: 2048,
+      },
+    });
 
-  const essay = soalEssay.map((soal, index) => {
-    const hasil = hasilPenilaian.essay?.[index];
-    return {
-      nomor: soal.nomor,
-      pembahasan:
-        hasil?.feedback || "Perhatikan poin-poin penting dalam jawaban.",
-      contohJawabanIdeal: soal.kunciJawaban || "Lihat kunci jawaban di buku.",
-      konsepTerkait: "Pahami konsep dasar materi ini.",
-    };
-  });
+    const soalList = soalEssay
+      .map((s, i) => {
+        const h = hasilEssay[i];
+        return `${s.nomor}. [${h?.nilai || 0}/100] ${s.pertanyaan.substring(
+          0,
+          80
+        )}`;
+      })
+      .join("\n");
 
-  const nilaiTotal = hasilPenilaian.ringkasan?.nilaiTotal ?? 0;
-  const benarPG = hasilPenilaian.ringkasan?.benarPG ?? 0;
-  const totalPG = soalPG.length;
+    const prompt = `Buat pembahasan singkat untuk essay:
+${soalList}
 
-  let saranBelajar = [];
+Output JSON array: [{"nomor":1,"pembahasan":"...","contohJawabanIdeal":"...","konsepTerkait":"..."}]`;
+
+    const result = await model.generateContent(prompt);
+    const data = parseJSON(result.response.text());
+    return Array.isArray(data) ? data : data.essay || [];
+  } catch {
+    return soalEssay.map((s) => ({
+      nomor: s.nomor,
+      pembahasan: "Perhatikan poin-poin penting dalam kunci jawaban",
+      contohJawabanIdeal: s.kunciJawaban || "Lihat kunci jawaban",
+      konsepTerkait: "Pahami konsep dasar",
+    }));
+  }
+}
+
+// ✅ Generate learning recommendations
+async function generateSaran(
+  nilaiTotal: number,
+  benarPG: number,
+  totalPG: number
+): Promise<string[]> {
   if (nilaiTotal >= 85) {
-    saranBelajar = [
-      "Hasil yang sangat baik! Pertahankan cara belajarmu.",
-      "Coba tantang diri dengan soal-soal yang lebih sulit.",
-      "Bantu teman yang kesulitan untuk memperdalam pemahamanmu.",
+    return [
+      "Hasil sangat baik! Pertahankan.",
+      "Coba latihan soal yang lebih menantang.",
     ];
   } else if (nilaiTotal >= 70) {
-    saranBelajar = [
-      "Hasil yang baik! Masih ada ruang untuk peningkatan.",
-      "Fokus pada konsep yang masih kurang dikuasai.",
-      "Latihan soal secara rutin untuk memperkuat pemahaman.",
+    return [
+      "Hasil baik! Terus berlatih.",
+      "Fokus pada konsep yang masih kurang.",
     ];
   } else {
-    saranBelajar = [
-      "Jangan menyerah! Setiap kesalahan adalah kesempatan belajar.",
-      "Pelajari kembali materi dari dasar.",
-      "Minta bantuan guru atau teman untuk menjelaskan konsep yang sulit.",
-      "Buat jadwal belajar rutin dan konsisten.",
+    return [
+      "Jangan menyerah!",
+      "Pelajari kembali materi dasar.",
+      "Latihan rutin setiap hari.",
     ];
   }
-
-  return { pilihanGanda, essay, saranBelajar };
 }
 
 export async function POST(request: NextRequest) {
@@ -114,157 +166,71 @@ export async function POST(request: NextRequest) {
     const benarPG = hasilPenilaian.ringkasan?.benarPG ?? 0;
 
     console.log(`[Review] Generating: ${totalPG} PG, ${totalEssay} Essay`);
+    const startTime = Date.now();
 
-    let result;
+    // ✅ Split PG into batches of 5 for parallel processing
+    const pgBatches: Promise<any[]>[] = [];
+    const batchSize = 5;
 
-    try {
-      const genAI = createGeminiClient();
-      const model = genAI.getGenerativeModel({
-        model: MODEL_CONFIG.pembahasanGenerator.model,
-        generationConfig: {
-          temperature: 0.5,
-          topP: 0.8,
-          maxOutputTokens: 8192,
-        },
-      });
-
-      const prompt = `Kamu guru profesional yang membuat pembahasan ujian yang KONSTRUKTIF dan MEMOTIVASI.
-
-## DATA HASIL UJIAN:
-- Benar PG: ${benarPG}/${totalPG}
-- Nilai Total: ${nilaiTotal}%
-- Status: ${nilaiTotal >= 70 ? "LULUS" : "BELUM LULUS"}
-
-## SOAL PILIHAN GANDA:
-${soalPG
-  .map((s, i) => {
-    const hasil = hasilPenilaian.pilihanGanda?.[i];
-    const status = hasil?.benar ? "✓ BENAR" : "✗ SALAH";
-    const jawabanSiswa = hasil?.jawabanSiswa || "-";
-    return `${s.nomor}. [${status}] Siswa: ${jawabanSiswa}, Benar: ${
-      s.jawabanBenar
-    }
-   Soal: ${s.pertanyaan.substring(0, 80)}...`;
-  })
-  .join("\n")}
-
-## SOAL ESSAY:
-${soalEssay
-  .map((s, i) => {
-    const hasil = hasilPenilaian.essay?.[i];
-    return `${s.nomor}. Nilai: ${hasil?.nilai || 0}/100
-   Soal: ${s.pertanyaan.substring(0, 80)}...
-   Feedback: ${hasil?.feedback || "-"}`;
-  })
-  .join("\n")}
-
-## INSTRUKSI:
-Buat pembahasan yang:
-1. POSITIF - mulai dengan apa yang sudah baik
-2. KONSTRUKTIF - saran perbaikan yang spesifik
-3. MEMOTIVASI - dorong siswa untuk terus belajar
-4. SINGKAT - maksimal 2-3 kalimat per pembahasan
-
-## OUTPUT JSON (tanpa markdown):
-{
-  "pilihanGanda": [
-    {
-      "nomor": 1,
-      "pembahasan": "Penjelasan mengapa jawaban benar/salah",
-      "konsepTerkait": "Konsep yang perlu dipahami",
-      "tips": "Tips singkat untuk mengingat"
-    }
-  ],
-  "essay": [
-    {
-      "nomor": 1,
-      "pembahasan": "Analisis jawaban siswa",
-      "contohJawabanIdeal": "Contoh jawaban yang baik",
-      "konsepTerkait": "Konsep penting"
-    }
-  ],
-  "saranBelajar": [
-    "Saran 1 yang spesifik",
-    "Saran 2 yang actionable",
-    "Saran 3 yang memotivasi"
-  ]
-}
-
-Buat tepat ${totalPG} pembahasan PG dan ${totalEssay} pembahasan essay.
-Output HANYA JSON, tanpa teks lain.`;
-
-      console.log("[Review] Calling Gemini AI...");
-      const startTime = Date.now();
-
-      const aiResult = await model.generateContent(prompt);
-      const response = await aiResult.response;
-      const text = response.text();
-
-      console.log(
-        `[Review] Done in ${((Date.now() - startTime) / 1000).toFixed(1)}s`
-      );
-
-      result = parseJSON(text);
-    } catch (aiError: any) {
-      console.log(`[Review] AI failed: ${aiError.message} - Using fallback`);
-      result = generateLocalReview(soalPG, soalEssay, hasilPenilaian);
+    for (let i = 0; i < totalPG; i += batchSize) {
+      const soalBatch = soalPG.slice(i, i + batchSize);
+      const hasilBatch =
+        hasilPenilaian.pilihanGanda?.slice(i, i + batchSize) || [];
+      pgBatches.push(generatePGBatchReview(soalBatch, hasilBatch));
     }
 
-    // Ensure complete data
-    if (!result.pilihanGanda) result.pilihanGanda = [];
-    if (!result.essay) result.essay = [];
-    if (!result.saranBelajar) result.saranBelajar = [];
+    // ✅ Run ALL in parallel: PG batches + Essay + Saran
+    const [essayReview, saranBelajar, ...pgBatchResults] = await Promise.all([
+      generateEssayReview(soalEssay, hasilPenilaian.essay || []),
+      generateSaran(nilaiTotal, benarPG, totalPG),
+      ...pgBatches,
+    ]);
 
-    // Fill missing PG
-    while (result.pilihanGanda.length < totalPG) {
-      const i = result.pilihanGanda.length;
+    // Combine PG results
+    let pilihanGanda: any[] = [];
+    for (const batch of pgBatchResults) {
+      pilihanGanda = pilihanGanda.concat(batch);
+    }
+
+    // ✅ Fill missing and normalize
+    while (pilihanGanda.length < totalPG) {
+      const i = pilihanGanda.length;
       const benar = hasilPenilaian.pilihanGanda?.[i]?.benar;
-      const soal = soalPG[i];
-      result.pilihanGanda.push({
+      pilihanGanda.push({
         nomor: i + 1,
         pembahasan: benar
-          ? `Benar! Jawaban ${soal?.jawabanBenar} tepat.`
-          : `Jawaban yang benar adalah ${soal?.jawabanBenar}.`,
-        konsepTerkait: "Pelajari materi terkait.",
-        tips: benar ? "Bagus!" : "Pelajari lagi.",
+          ? "Jawaban benar!"
+          : `Jawaban yang benar adalah ${soalPG[i]?.jawabanBenar}`,
+        konsepTerkait: "Materi terkait",
+        tips: benar ? "Bagus!" : "Pelajari lagi",
       });
     }
 
-    // Fill missing Essay
-    while (result.essay.length < totalEssay) {
-      const i = result.essay.length;
-      const soal = soalEssay[i];
-      const hasil = hasilPenilaian.essay?.[i];
-      result.essay.push({
+    let essay = essayReview;
+    while (essay.length < totalEssay) {
+      const i = essay.length;
+      essay.push({
         nomor: i + 1,
-        pembahasan: hasil?.feedback || "Perhatikan poin-poin penting.",
-        contohJawabanIdeal: soal?.kunciJawaban || "Lihat kunci jawaban.",
-        konsepTerkait: "Pahami konsep dasar.",
+        pembahasan:
+          hasilPenilaian.essay?.[i]?.feedback || "Perhatikan poin penting",
+        contohJawabanIdeal: soalEssay[i]?.kunciJawaban || "Lihat kunci",
+        konsepTerkait: "Konsep dasar",
       });
-    }
-
-    // Fill missing saran
-    if (result.saranBelajar.length === 0) {
-      result.saranBelajar =
-        nilaiTotal >= 70
-          ? [
-              "Hasil bagus! Pertahankan.",
-              "Terus berlatih.",
-              "Bantu teman belajar.",
-            ]
-          : ["Jangan menyerah!", "Pelajari kembali materi.", "Latihan rutin."];
     }
 
     // Normalize numbering
-    result.pilihanGanda = result.pilihanGanda
+    pilihanGanda = pilihanGanda
       .slice(0, totalPG)
-      .map((p: any, i: number) => ({ ...p, nomor: i + 1 }));
-    result.essay = result.essay
-      .slice(0, totalEssay)
-      .map((e: any, i: number) => ({ ...e, nomor: i + 1 }));
+      .map((p, i) => ({ ...p, nomor: i + 1 }));
+    essay = essay.slice(0, totalEssay).map((e, i) => ({ ...e, nomor: i + 1 }));
 
-    console.log("[Review] Complete ✓");
-    return NextResponse.json({ success: true, data: result });
+    const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`[Review] Complete in ${duration}s`);
+
+    return NextResponse.json({
+      success: true,
+      data: { pilihanGanda, essay, saranBelajar },
+    });
   } catch (error: any) {
     console.error("Review Error:", error);
     return NextResponse.json(
