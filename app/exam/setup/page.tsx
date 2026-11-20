@@ -35,25 +35,23 @@ import { useGenerateExam } from "@/hooks/useGenerateExam";
 import { QuestionCountSelector } from "@/components/exam/QuestionCountSelector";
 import Image from "next/image";
 
-// ✅ Loading Component
-function GeneratingLoader({
-  step,
-  totalSteps,
-}: {
-  step: number;
-  totalSteps: number;
-}) {
-  const steps = [
-    { icon: Brain, text: "AI sedang menganalisis kurikulum..." },
-    { icon: FileText, text: "Membuat soal pilihan ganda (Batch 1)..." },
-    { icon: FileText, text: "Membuat soal pilihan ganda (Batch 2)..." },
-    { icon: FileText, text: "Membuat soal pilihan ganda (Batch 3)..." },
-    { icon: Sparkles, text: "Membuat soal essay..." },
-    { icon: CheckCircle, text: "Memvalidasi dan menggabungkan soal..." },
-  ];
 
-  // Only show relevant steps based on totalSteps
-  const displaySteps = steps.slice(0, totalSteps);
+// Mirrors the server pipeline in lib/exam/generate.ts; the server buffers PG by 1.5x in batches of 10.
+function loaderSteps(jumlahSoalPG: number) {
+  const batches = Math.ceil((jumlahSoalPG * 1.5) / 10);
+  return [
+    { icon: Brain, text: "Menyiapkan materi sesuai kurikulum..." },
+    ...Array.from({ length: batches }, (_, i) => ({
+      icon: FileText,
+      text: `Membuat soal pilihan ganda (bagian ${i + 1} dari ${batches})...`,
+    })),
+    { icon: Sparkles, text: "Membuat soal essay..." },
+    { icon: CheckCircle, text: "Memeriksa ulang kunci jawaban..." },
+  ];
+}
+
+function GeneratingLoader({ step, jumlahSoalPG }: { step: number; jumlahSoalPG: number }) {
+  const displaySteps = loaderSteps(jumlahSoalPG);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 p-4">
@@ -71,10 +69,10 @@ function GeneratingLoader({
         </motion.div>
 
         <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
-          3 AI Sedang Bekerja Paralel
+          Menyiapkan Soal Ujianmu
         </h2>
         <p className="text-gray-600 mb-8">
-          Membuat soal ujian khusus untuk kamu dengan kecepatan maksimal...
+          Biasanya butuh 30-40 detik. Jangan tutup halaman ini.
         </p>
 
         {/* Progress Steps */}
@@ -128,15 +126,6 @@ function GeneratingLoader({
             );
           })}
         </div>
-
-        <motion.p
-          className="mt-8 text-sm text-gray-500 italic"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1 }}
-        >
-          💡 3 AI bekerja bersamaan = 3x lebih cepat!
-        </motion.p>
       </div>
     </div>
   );
@@ -241,15 +230,13 @@ export default function ExamSetupPage() {
 
     setGeneratingStep(0);
 
-    // Calculate loading steps based on PG count
-    const pgBatches = Math.ceil(formData.jumlahSoalPG / 10);
-    const totalLoadingSteps = 1 + pgBatches + 1 + 1; // analyze + pg batches + essay + validate
+    const totalLoadingSteps = loaderSteps(formData.jumlahSoalPG).length;
 
     const stepInterval = setInterval(() => {
       setGeneratingStep((prev) =>
         prev < totalLoadingSteps - 1 ? prev + 1 : prev
       );
-    }, 2500);
+    }, 4000);
 
     try {
       const result = await generateExam({
@@ -313,10 +300,7 @@ export default function ExamSetupPage() {
 
   // Show Loading Screen
   if (isLoading) {
-    const pgBatches = Math.ceil(formData.jumlahSoalPG / 10);
-    return (
-      <GeneratingLoader step={generatingStep} totalSteps={1 + pgBatches + 2} />
-    );
+    return <GeneratingLoader step={generatingStep} jumlahSoalPG={formData.jumlahSoalPG} />;
   }
 
   // Show Error Screen

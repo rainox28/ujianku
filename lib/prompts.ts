@@ -1,7 +1,3 @@
-// lib/prompts.ts - UPDATE SEMUA
-
-import { EXAM_CONFIG } from "./constants";
-
 interface BasePromptParams {
   jenjang: string;
   kelas: number;
@@ -10,63 +6,59 @@ interface BasePromptParams {
 }
 
 interface PGBatchParams extends BasePromptParams {
-  batchNumber: number;
   jumlahSoal: number;
-  startNomor: number;
+  batchIndex: number;
+  batchCount: number;
+  fokus: string;
 }
 
 interface EssayParams extends BasePromptParams {
   jumlahSoal: number;
 }
 
-// ✅ SIMPLIFIED PG Prompt - Fokus pada output yang benar
+/**
+ * Batches run in parallel and cannot see each other, so each one gets a different slice of the
+ * semester and a different kind of question to keep them from writing the same items.
+ */
+export const PG_BATCH_FOCUS = [
+  "pemahaman konsep dan definisi",
+  "penerapan dan perhitungan",
+  "soal cerita dalam konteks kehidupan sehari-hari",
+  "analisis, perbandingan, dan hubungan antar konsep",
+  "penalaran tingkat tinggi (HOTS) dan evaluasi",
+];
+
 export function createSoalPGBatchPrompt(params: PGBatchParams): string {
-  const { jenjang, kelas, semester, namaMapel, jumlahSoal, startNomor } =
+  const { jenjang, kelas, semester, namaMapel, jumlahSoal, batchIndex, batchCount, fokus } =
     params;
 
-  return `Buat ${jumlahSoal} soal pilihan ganda ${namaMapel} untuk ${jenjang} kelas ${kelas} semester ${semester}.
+  const bagian =
+    batchCount > 1
+      ? `Bagi materi ${namaMapel} semester ${semester} kurikulum Merdeka menjadi ${batchCount} bagian berurutan. Buat soal HANYA dari bagian ke-${batchIndex + 1}.`
+      : `Sebar soal ke seluruh materi ${namaMapel} semester ${semester} kurikulum Merdeka.`;
+
+  return `Kamu guru ${namaMapel} berpengalaman. Buat ${jumlahSoal} soal pilihan ganda untuk siswa ${jenjang} kelas ${kelas}.
+
+${bagian}
+Jenis soal: ${fokus}.
 
 ATURAN:
-- Setiap soal HARUS punya pertanyaan jelas (ada tanda ? atau kata tanya)
-- 5 opsi (A-E) yang masuk akal
-- Jawaban benar salah satu dari A/B/C/D/E
-- Bahasa Indonesia baku
-
-CONTOH FORMAT:
-[{"nomor":1,"pertanyaan":"Apa ibu kota Indonesia?","opsi":{"A":"Jakarta","B":"Bandung","C":"Surabaya","D":"Medan","E":"Makassar"},"jawabanBenar":"A"}]
-
-Buat ${jumlahSoal} soal mulai nomor ${startNomor}. Output HANYA JSON array, tanpa teks lain.`;
+- Setiap soal membahas topik atau kasus yang berbeda; jangan mengulang soal yang mirip.
+- Sesuaikan tingkat bahasa dan kesulitan dengan ${jenjang} kelas ${kelas}.
+- 5 opsi (A-E), tepat satu yang benar, semua pengecoh masuk akal dan berbeda satu sama lain.
+- Jangan gunakan opsi yang merujuk opsi lain ("A dan B benar", "semua benar", "tidak ada yang benar").
+- Pastikan kunci jawaban benar-benar tepat. Untuk soal hitungan, periksa ulang hasilnya.
+- Bahasa Indonesia baku${namaMapel === "Bahasa Inggris" ? " untuk instruksi; isi soal boleh berbahasa Inggris" : ""}.`;
 }
 
-// ✅ SIMPLIFIED Essay Prompt - Lebih pendek, lebih jelas
 export function createSoalEssayPrompt(params: EssayParams): string {
   const { jenjang, kelas, semester, namaMapel, jumlahSoal } = params;
 
-  return `Buat ${jumlahSoal} soal essay ${namaMapel} untuk ${jenjang} kelas ${kelas} semester ${semester}.
+  return `Kamu guru ${namaMapel} berpengalaman. Buat ${jumlahSoal} soal essay untuk siswa ${jenjang} kelas ${kelas}, materi semester ${semester} kurikulum Merdeka.
 
 ATURAN:
-- Pertanyaan jelas yang butuh penjelasan
-- Kunci jawaban berisi poin-poin penting (bukan format exact)
-
-FORMAT JSON:
-[{"nomor":1,"pertanyaan":"Jelaskan proses fotosintesis!","kunciJawaban":"Proses pembuatan makanan oleh tumbuhan menggunakan cahaya matahari, air, dan CO2 menghasilkan glukosa dan O2","poinPenilaian":["Menyebutkan bahan","Menyebutkan hasil","Menjelaskan proses"]}]
-
-Buat ${jumlahSoal} soal. Output HANYA JSON array.`;
-}
-
-// Keep for backward compatibility
-export function createSoalGeneratorPrompt(params: {
-  jenjang: string;
-  kelas: number;
-  semester: number;
-  mataPelajaran: string;
-  namaMapel: string;
-  materiTambahan?: string;
-}): string {
-  return createSoalPGBatchPrompt({
-    ...params,
-    batchNumber: 1,
-    jumlahSoal: EXAM_CONFIG.DEFAULT_SOAL_PG,
-    startNomor: 1,
-  });
+- Setiap soal dari topik yang berbeda dan menuntut penjelasan, bukan jawaban satu kata.
+- kunciJawaban berisi poin-poin inti yang harus ada di jawaban siswa.
+- poinPenilaian berisi 2-4 kriteria penilaian yang spesifik untuk soal tersebut.
+- Bahasa Indonesia baku.`;
 }
