@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { limitCaller } from "@/lib/rate-limit";
 import { db, examResults } from "@/lib/db";
 import { gradeExam, sanitizeAnswers } from "@/lib/exam/grading";
 import { generateReview } from "@/lib/exam/review";
@@ -22,6 +23,8 @@ export async function POST(
   const receivedAt = Date.now();
   const session = await auth();
   const userId = session?.user?.id ?? null;
+  const limited = await limitCaller(request, "submit", userId);
+  if (limited) return limited;
 
   const exam = await findAccessibleExam(id, userId);
   if (!exam) {

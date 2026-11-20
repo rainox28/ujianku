@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createGeminiClient, MODEL_CONFIG } from "@/lib/gemini";
 import { auth } from "@/lib/auth";
 import { createExam, toPublicExam } from "@/lib/exam/store";
+import { LIMITS, limitCaller, rateLimit } from "@/lib/rate-limit";
 import { createSoalPGBatchPrompt, createSoalEssayPrompt } from "@/lib/prompts";
 import { MATA_PELAJARAN, EXAM_CONFIG, KELAS_BY_JENJANG } from "@/lib/constants";
 import type { Jenjang } from "@/types";
@@ -421,6 +422,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const session = await auth();
+    const limited =
+      (await limitCaller(request, "generate", session?.user?.id)) ??
+      (await rateLimit("generate:global", LIMITS.generateGlobal));
+    if (limited) return limited;
+
     const finalPGCount = Math.max(
       EXAM_CONFIG.MIN_SOAL_PG,
       Math.min(EXAM_CONFIG.MAX_SOAL_PG, Number(jumlahSoalPG) || EXAM_CONFIG.DEFAULT_SOAL_PG)
@@ -563,7 +570,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const session = await auth();
     const exam = await createExam({
       userId: session?.user?.id ?? null,
       jenjang,

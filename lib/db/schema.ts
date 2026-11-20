@@ -163,3 +163,16 @@ export type Exam = typeof exams.$inferSelect;
 export type NewExam = typeof exams.$inferInsert;
 export type ExamResult = typeof examResults.$inferSelect;
 export type NewExamResult = typeof examResults.$inferInsert;
+
+// Fixed-window request counters, keyed by action and caller (user id or IP).
+export const rateLimits = pgTable(
+  "rate_limits",
+  {
+    key: text("key").notNull(),
+    windowStart: timestamp("window_start", { mode: "date" }).notNull(),
+    count: integer("count").notNull().default(0),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.key, t.windowStart] }),
+  })
+);

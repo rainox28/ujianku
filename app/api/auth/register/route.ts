@@ -3,10 +3,19 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db, users } from "@/lib/db";
 import { eq } from "drizzle-orm";
+import { limitCaller } from "@/lib/rate-limit";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: NextRequest) {
+  const limited = await limitCaller(request, "register", null);
+  if (limited) return limited;
+
   try {
-    const { name, email, password } = await request.json();
+    const body = await request.json();
+    const name = typeof body.name === "string" ? body.name.trim().slice(0, 100) : "";
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    const password = typeof body.password === "string" ? body.password : "";
 
     // Validation
     if (!name || !email || !password) {
@@ -16,9 +25,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (password.length < 6) {
+    if (!EMAIL_RE.test(email) || email.length > 254) {
+      return NextResponse.json({ error: "Format email tidak valid" }, { status: 400 });
+    }
+
+    // bcrypt only uses the first 72 bytes, so longer passwords would silently be truncated.
+    if (password.length < 6 || password.length > 72) {
       return NextResponse.json(
-        { error: "Password minimal 6 karakter" },
+        { error: "Password harus 6-72 karakter" },
         { status: 400 }
       );
     }

@@ -15,6 +15,13 @@
       "when": 1795105252388,
       "tag": "0001_exam_server_state",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795133408857,
+      "tag": "0002_rate_limits",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,6 @@
 // lib/uploadthing.ts
 import { createUploadthing, type FileRouter } from "uploadthing/next";
+import { UploadThingError } from "uploadthing/server";
 import { auth } from "@/lib/auth";
 
 const f = createUploadthing();
@@ -20,13 +21,12 @@ export const ourFileRouter = {
   })
     .middleware(async () => {
       const session = await auth();
-      // Allow guest uploads too
-      return { userId: session?.user?.id || "guest" };
+      if (!session?.user?.id) throw new UploadThingError("Silakan login terlebih dahulu");
+      return { userId: session.user.id };
     })
     .onUploadComplete(async ({ metadata, file }) => {
       console.log("Upload complete for userId:", metadata.userId);
-      console.log("File URL:", file.url);
-      return { url: file.url };
+      return { url: file.ufsUrl };
     }),
 } satisfies FileRouter;
 

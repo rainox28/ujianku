@@ -1,7 +1,7 @@
 // app/api/user/stats/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { db, examResults } from "@/lib/db";
+import { db, examResults, exams } from "@/lib/db";
 import { eq, count, avg, sql } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
@@ -45,13 +45,14 @@ export async function GET(request: NextRequest) {
     // Get subject breakdown
     const subjectStats = await db
       .select({
-        mataPelajaran: sql<string>`${examResults}.exam->>'mata_pelajaran'`,
+        mataPelajaran: exams.mataPelajaran,
         avgScore: avg(examResults.nilaiTotal),
         count: count(),
       })
       .from(examResults)
+      .innerJoin(exams, eq(examResults.examId, exams.id))
       .where(eq(examResults.userId, userId))
-      .groupBy(sql`${examResults}.exam->>'mata_pelajaran'`);
+      .groupBy(exams.mataPelajaran);
 
     return NextResponse.json({
       success: true,

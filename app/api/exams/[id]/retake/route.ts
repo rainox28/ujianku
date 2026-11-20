@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { limitCaller } from "@/lib/rate-limit";
 import { createExam, findAccessibleExam, toFullExam, toPublicExam } from "@/lib/exam/store";
 
 export const dynamic = "force-dynamic";
 
 /** Starts a fresh attempt with the same questions and a new deadline. */
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   const session = await auth();
   const userId = session?.user?.id ?? null;
+  const limited = await limitCaller(request, "retake", userId);
+  if (limited) return limited;
 
   const source = await findAccessibleExam(id, userId);
   if (!source) {
