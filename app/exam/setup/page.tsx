@@ -277,7 +277,6 @@ export default function ExamSetupPage() {
             durasi: estimatedDuration,
           })
         );
-        sessionStorage.setItem("examStartTime", new Date().toISOString());
 
         window.location.href = "/exam/start";
       }

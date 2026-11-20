@@ -50,11 +50,24 @@ export default function ExamResultPage() {
     }
   }, [router]);
 
-  // Handle retry - same exam
-  const handleRetry = () => {
-    sessionStorage.removeItem("examResult");
-    sessionStorage.removeItem("examAnswers");
-    router.push("/exam/start");
+  // A submitted exam is locked, so a retry starts a new attempt with the same questions.
+  const handleRetry = async () => {
+    if (!result?.examId) {
+      router.push("/exam/setup");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/exams/${result.examId}/retake`, { method: "POST" });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error);
+      sessionStorage.setItem("examData", JSON.stringify(body.data));
+      sessionStorage.removeItem("examResult");
+      sessionStorage.removeItem("examAnswers");
+      window.location.href = "/exam/start";
+    } catch (e) {
+      console.error("Retake error:", e);
+      router.push("/exam/setup");
+    }
   };
 
   if (!isLoaded || !result) {

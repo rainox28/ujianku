@@ -8,10 +8,15 @@ const API_KEYS = [
   process.env.GEMINI_API_KEY_3!,
 ].filter(Boolean);
 
+if (API_KEYS.length === 0) {
+  console.warn("No GEMINI_API_KEY_1..3 set; AI calls will fail.");
+}
+
 let currentKeyIndex = 0;
 
 // Rotate ke key berikutnya
 function getNextApiKey(): string {
+  if (API_KEYS.length === 0) throw new Error("GEMINI_API_KEY is not configured");
   const key = API_KEYS[currentKeyIndex];
   currentKeyIndex = (currentKeyIndex + 1) % API_KEYS.length;
   return key;
@@ -54,18 +59,13 @@ export const MODEL_CONFIG = {
   },
 };
 
-// Types untuk API response
+export type OpsiJawaban = "A" | "B" | "C" | "D" | "E";
+
 export interface GeneratedSoalPG {
   nomor: number;
   pertanyaan: string;
-  opsi: {
-    A: string;
-    B: string;
-    C: string;
-    D: string;
-    E: string;
-  };
-  jawabanBenar: "A" | "B" | "C" | "D" | "E";
+  opsi: Record<OpsiJawaban, string>;
+  jawabanBenar: OpsiJawaban;
 }
 
 export interface GeneratedSoalEssay {
@@ -73,39 +73,32 @@ export interface GeneratedSoalEssay {
   pertanyaan: string;
   kunciJawaban: string;
   poinPenilaian: string[];
+}
+
+export interface ExamMetadata {
+  jenjang: string;
+  kelas: number;
+  semester: number;
+  mataPelajaran: string;
+  tanggalGenerate: string;
+  jumlahSoalPG?: number;
+  jumlahSoalEssay?: number;
 }
 
 export interface GeneratedExam {
   pilihanGanda: GeneratedSoalPG[];
   essay: GeneratedSoalEssay[];
-  metadata: {
-    jenjang: string;
-    kelas: number;
-    semester: number;
-    mataPelajaran: string;
-    tanggalGenerate: string;
-    jumlahSoalPG?: number; // NEW
-    jumlahSoalEssay?: number; // NEW
-  };
+  metadata: ExamMetadata;
 }
 
-export interface GeneratedSoalPG {
-  nomor: number;
-  pertanyaan: string;
-  opsi: {
-    A: string;
-    B: string;
-    C: string;
-    D: string;
-    E: string;
-  };
-  jawabanBenar: "A" | "B" | "C" | "D" | "E";
-}
+// What the browser receives while the exam is running: no answer keys.
+export type PublicSoalPG = Omit<GeneratedSoalPG, "jawabanBenar">;
+export type PublicSoalEssay = Pick<GeneratedSoalEssay, "nomor" | "pertanyaan">;
 
-export interface GeneratedSoalEssay {
-  nomor: number;
-  pertanyaan: string;
-  kunciJawaban: string;
-  poinPenilaian: string[];
-  variasiJawabanBenar?: string[]; // NEW - untuk semantic grading
+export interface PublicExam {
+  examId: string;
+  expiresAt: string;
+  pilihanGanda: PublicSoalPG[];
+  essay: PublicSoalEssay[];
+  metadata: ExamMetadata;
 }

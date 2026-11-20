@@ -1,7 +1,6 @@
-// app/exam/start/page.tsx
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   BookOpen,
@@ -15,46 +14,14 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { EXAM_CONFIG, calculateDuration } from "@/lib/constants";
 import { useTimer } from "@/hooks/useTimer";
-import { useExamStore } from "@/hooks/useExamStore";
+import { useExamStore, SubmitError } from "@/hooks/useExamStore";
 import { QuestionPG } from "@/components/exam/QuestionPG";
 import { QuestionEssay } from "@/components/exam/QuestionEssay";
 import { ExamNavigation } from "@/components/exam/ExamNavigation";
 import { SubmitModal } from "@/components/exam/SubmitModal";
 import { TimeUpModal } from "@/components/exam/TimeUpModal";
 import Image from "next/image";
-
-// ✅ Helper to get duration from storage
-function getExamDuration(): number {
-  if (typeof window === "undefined") return 90;
-
-  try {
-    const examSetupStr = sessionStorage.getItem("examSetup");
-    if (examSetupStr) {
-      const examSetup = JSON.parse(examSetupStr);
-      if (examSetup.durasi) return examSetup.durasi;
-      if (examSetup.jumlahSoalPG && examSetup.jumlahSoalEssay) {
-        return calculateDuration(
-          examSetup.jumlahSoalPG,
-          examSetup.jumlahSoalEssay
-        );
-      }
-    }
-
-    const examDataStr = sessionStorage.getItem("examData");
-    if (examDataStr) {
-      const data = JSON.parse(examDataStr);
-      const pgCount = data.pilihanGanda?.length || EXAM_CONFIG.DEFAULT_SOAL_PG;
-      const essayCount = data.essay?.length || EXAM_CONFIG.DEFAULT_SOAL_ESSAY;
-      return calculateDuration(pgCount, essayCount);
-    }
-  } catch (e) {
-    console.log("Error getting duration, using default");
-  }
-
-  return 90; // Default fallback
-}
 
 export default function ExamStartPage() {
   const router = useRouter();
@@ -83,45 +50,19 @@ export default function ExamStartPage() {
     setShowTimeUpModal(true);
   }, []);
 
-  // ✅ Get duration (will be used after load)
-  const [examDuration, setExamDuration] = useState<number>(90);
-
-  // ✅ Timer - starts when isLoaded becomes true
-  const {
-    formattedTime,
-    isWarning,
-    isDanger,
-    start: startTimer,
-  } = useTimer({
-    initialMinutes: examDuration,
+  const endsAt = examData ? new Date(examData.expiresAt).getTime() : null;
+  const { formattedTime, isWarning, isDanger } = useTimer({
+    endsAt,
     onTimeUp: handleTimeUp,
-    autoStart: isLoaded,
   });
 
-  // ✅ Load exam on mount
   useEffect(() => {
-    const loaded = loadExam();
-    if (!loaded) {
+    if (!loadExam()) {
       router.replace("/exam/setup");
       return;
     }
-
-    // Get and set duration
-    const duration = getExamDuration();
-    setExamDuration(duration);
-    console.log(`[Timer] Duration set to ${duration} minutes`);
-
-    // Mark as loaded (this will trigger timer start via autoStart)
     setIsLoaded(true);
   }, [loadExam, router]);
-
-  // ✅ Start timer when loaded and duration is set
-  useEffect(() => {
-    if (isLoaded && examDuration > 0) {
-      console.log(`[Timer] Starting with ${examDuration} minutes`);
-      startTimer();
-    }
-  }, [isLoaded, examDuration, startTimer]);
 
   useEffect(() => {
     const handleScroll = () => setShowScrollTop(window.scrollY > 500);
@@ -140,11 +81,26 @@ export default function ExamStartPage() {
       } else {
         throw new Error("Submit failed");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Submit error:", error);
-      setSubmitError("Gagal mengirim. Coba lagi.");
+      if (error instanceof SubmitError && (error.status === 409 || error.status === 410)) {
+        setSubmitError(`${error.message}. Silakan mulai ujian baru.`);
+      } else {
+        setSubmitError("Gagal mengirim. Coba lagi.");
+      }
     }
   };
+
+  // Submit on our own when time runs out; the server only accepts a short grace period after the deadline.
+  const autoSubmittedRef = useRef(false);
+  const handleSubmitRef = useRef(handleSubmit);
+  handleSubmitRef.current = handleSubmit;
+  useEffect(() => {
+    if (showTimeUpModal && !autoSubmittedRef.current) {
+      autoSubmittedRef.current = true;
+      handleSubmitRef.current();
+    }
+  }, [showTimeUpModal]);
 
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 

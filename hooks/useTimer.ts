@@ -1,108 +1,69 @@
-// hooks/useTimer.ts
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface UseTimerOptions {
-  initialMinutes: number;
+  /** Deadline in epoch ms, from the server. The countdown starts once this is set. */
+  endsAt: number | null;
   onTimeUp?: () => void;
-  autoStart?: boolean;
 }
 
 interface UseTimerReturn {
   timeRemaining: number;
-  isRunning: boolean;
   isWarning: boolean;
   isDanger: boolean;
   formattedTime: string;
-  start: () => void;
-  pause: () => void;
-  reset: () => void;
 }
 
-export function useTimer({
-  initialMinutes,
-  onTimeUp,
-  autoStart = true,
-}: UseTimerOptions): UseTimerReturn {
-  const [timeRemaining, setTimeRemaining] = useState(initialMinutes * 60);
-  const [isRunning, setIsRunning] = useState(false); // Start false, will be set by effect
-  const onTimeUpRef = useRef(onTimeUp);
-  const hasStartedRef = useRef(false);
+function secondsUntil(endsAt: number) {
+  return Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+}
 
-  // Update callback ref
+function formatTime(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  const mm = mins.toString().padStart(2, "0");
+  const ss = secs.toString().padStart(2, "0");
+  return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+export function useTimer({ endsAt, onTimeUp }: UseTimerOptions): UseTimerReturn {
+  const [timeRemaining, setTimeRemaining] = useState(() =>
+    endsAt ? secondsUntil(endsAt) : 0
+  );
+  const onTimeUpRef = useRef(onTimeUp);
+
   useEffect(() => {
     onTimeUpRef.current = onTimeUp;
   }, [onTimeUp]);
 
-  // ✅ FIX: React to autoStart changes
+  // Recomputed from the deadline each tick, so a refresh or a throttled background tab cannot add time.
   useEffect(() => {
-    if (autoStart && !hasStartedRef.current) {
-      setIsRunning(true);
-      hasStartedRef.current = true;
-    }
-  }, [autoStart]);
+    if (endsAt === null) return;
 
-  // ✅ FIX: React to initialMinutes changes (reset timer)
-  useEffect(() => {
-    setTimeRemaining(initialMinutes * 60);
-  }, [initialMinutes]);
+    let fired = false;
+    const tick = () => {
+      const left = secondsUntil(endsAt);
+      setTimeRemaining(left);
+      if (left === 0 && !fired) {
+        fired = true;
+        onTimeUpRef.current?.();
+      }
+      return left;
+    };
 
-  // Countdown effect
-  useEffect(() => {
-    if (!isRunning || timeRemaining <= 0) return;
-
+    if (tick() === 0) return;
     const interval = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          setIsRunning(false);
-          onTimeUpRef.current?.();
-          return 0;
-        }
-        return prev - 1;
-      });
+      if (tick() === 0) clearInterval(interval);
     }, 1000);
-
     return () => clearInterval(interval);
-  }, [isRunning, timeRemaining]);
-
-  const start = useCallback(() => {
-    setIsRunning(true);
-    hasStartedRef.current = true;
-  }, []);
-
-  const pause = useCallback(() => setIsRunning(false), []);
-
-  const reset = useCallback(() => {
-    setTimeRemaining(initialMinutes * 60);
-    setIsRunning(false);
-    hasStartedRef.current = false;
-  }, [initialMinutes]);
-
-  // Format time as MM:SS or HH:MM:SS if > 60 minutes
-  const formatTime = (seconds: number): string => {
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-
-    if (hours > 0) {
-      return `${hours}:${mins.toString().padStart(2, "0")}:${secs
-        .toString()
-        .padStart(2, "0")}`;
-    }
-    return `${mins.toString().padStart(2, "0")}:${secs
-      .toString()
-      .padStart(2, "0")}`;
-  };
+  }, [endsAt]);
 
   return {
     timeRemaining,
-    isRunning,
     isWarning: timeRemaining <= 300 && timeRemaining > 60,
     isDanger: timeRemaining <= 60,
     formattedTime: formatTime(timeRemaining),
-    start,
-    pause,
-    reset,
   };
 }

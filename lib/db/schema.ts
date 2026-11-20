@@ -84,8 +84,15 @@ export const exams = pgTable("exams", {
   soalPG: json("soal_pg").notNull(),
   soalEssay: json("soal_essay").notNull(),
 
-  // Metadata
   uploadedFileUrl: text("uploaded_file_url"),
+
+  // The server's deadline is authoritative; the client timer only displays it.
+  durasiMenit: integer("durasi_menit"),
+  expiresAt: timestamp("expires_at"),
+  // Set atomically on the first submit so an exam is graded at most once.
+  submittedAt: timestamp("submitted_at"),
+  retakeOfExamId: uuid("retake_of_exam_id"),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

@@ -1,8 +1,11 @@
 // app/api/generate-questions/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { createGeminiClient, MODEL_CONFIG, GeneratedExam } from "@/lib/gemini";
+import { createGeminiClient, MODEL_CONFIG } from "@/lib/gemini";
+import { auth } from "@/lib/auth";
+import { createExam, toPublicExam } from "@/lib/exam/store";
 import { createSoalPGBatchPrompt, createSoalEssayPrompt } from "@/lib/prompts";
-import { MATA_PELAJARAN, EXAM_CONFIG } from "@/lib/constants";
+import { MATA_PELAJARAN, EXAM_CONFIG, KELAS_BY_JENJANG } from "@/lib/constants";
+import type { Jenjang } from "@/types";
 
 export const maxDuration = 120;
 export const dynamic = "force-dynamic";
@@ -400,7 +403,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const mapelInfo = MATA_PELAJARAN.find((m) => m.id === mataPelajaran);
+    const kelasValid = KELAS_BY_JENJANG[jenjang as Jenjang]?.includes(Number(kelas));
+    if (!kelasValid || ![1, 2].includes(Number(semester))) {
+      return NextResponse.json(
+        { error: "Jenjang, kelas, atau semester tidak valid" },
+        { status: 400 }
+      );
+    }
+
+    const mapelInfo = MATA_PELAJARAN.find(
+      (m) => m.id === mataPelajaran && m.tersediaUntuk.includes(jenjang as Jenjang)
+    );
     if (!mapelInfo) {
       return NextResponse.json(
         { error: "Mata pelajaran tidak valid" },
@@ -410,11 +423,11 @@ export async function POST(request: NextRequest) {
 
     const finalPGCount = Math.max(
       EXAM_CONFIG.MIN_SOAL_PG,
-      Math.min(EXAM_CONFIG.MAX_SOAL_PG, jumlahSoalPG)
+      Math.min(EXAM_CONFIG.MAX_SOAL_PG, Number(jumlahSoalPG) || EXAM_CONFIG.DEFAULT_SOAL_PG)
     );
     const finalEssayCount = Math.max(
       EXAM_CONFIG.MIN_SOAL_ESSAY,
-      Math.min(EXAM_CONFIG.MAX_SOAL_ESSAY, jumlahSoalEssay)
+      Math.min(EXAM_CONFIG.MAX_SOAL_ESSAY, Number(jumlahSoalEssay) || EXAM_CONFIG.DEFAULT_SOAL_ESSAY)
     );
 
     console.log(`\n${"=".repeat(50)}`);
@@ -550,21 +563,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const finalExam: GeneratedExam = {
-      pilihanGanda: validPG,
-      essay: validEssay,
-      metadata: {
-        jenjang,
-        kelas,
-        semester,
-        mataPelajaran: mapelInfo.nama,
-        tanggalGenerate: new Date().toISOString(),
-        jumlahSoalPG: validPG.length,
-        jumlahSoalEssay: validEssay.length,
-      },
-    };
+    const session = await auth();
+    const exam = await createExam({
+      userId: session?.user?.id ?? null,
+      jenjang,
+      kelas: Number(kelas),
+      semester: Number(semester),
+      mataPelajaran: mapelInfo.nama,
+      soalPG: validPG,
+      soalEssay: validEssay,
+    });
 
-    return NextResponse.json({ success: true, data: finalExam });
+    // Answer keys stay in the database; the client only gets the questions.
+    return NextResponse.json({ success: true, data: toPublicExam(exam) });
   } catch (error: any) {
     console.error("Generate Error:", error);
     return NextResponse.json(

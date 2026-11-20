@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { GeneratedExam } from "@/lib/gemini";
+import type { PublicExam } from "@/lib/gemini";
 
 interface ExamSetupData {
   jenjang: string;
@@ -17,16 +17,16 @@ interface ExamSetupData {
 interface UseGenerateExamReturn {
   isLoading: boolean;
   error: string | null;
-  examData: GeneratedExam | null;
+  examData: PublicExam | null;
   retryAfter: number | null;
-  generateExam: (data: ExamSetupData) => Promise<GeneratedExam | null>;
+  generateExam: (data: ExamSetupData) => Promise<PublicExam | null>;
   reset: () => void;
 }
 
 export function useGenerateExam(): UseGenerateExamReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [examData, setExamData] = useState<GeneratedExam | null>(null);
+  const [examData, setExamData] = useState<PublicExam | null>(null);
   const [retryAfter, setRetryAfter] = useState<number | null>(null);
 
   const generateExam = useCallback(async (data: ExamSetupData) => {

@@ -46,6 +46,8 @@ export interface HasilPenilaianEssay {
 
 // Full interface
 export interface ExamResult {
+  examId: string;
+  resultId: string;
   penilaian: {
     pilihanGanda: HasilPenilaianPG[];
     essay: HasilPenilaianEssay[];

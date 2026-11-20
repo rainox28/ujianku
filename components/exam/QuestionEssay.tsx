@@ -2,10 +2,10 @@
 
 import { memo, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { GeneratedSoalEssay } from "@/lib/gemini";
+import type { PublicSoalEssay } from "@/lib/gemini";
 
 interface Props {
-  soal: GeneratedSoalEssay;
+  soal: PublicSoalEssay;
   jawaban: string;
   onAnswer: (jawaban: string) => void;
   disabled?: boolean;

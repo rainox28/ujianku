@@ -2,10 +2,10 @@
 
 import { memo } from "react";
 import { cn } from "@/lib/utils";
-import { GeneratedSoalPG } from "@/lib/gemini";
+import type { PublicSoalPG } from "@/lib/gemini";
 
 interface Props {
-  soal: GeneratedSoalPG;
+  soal: PublicSoalPG;
   jawaban: "A" | "B" | "C" | "D" | "E" | null;
   onAnswer: (jawaban: "A" | "B" | "C" | "D" | "E") => void;
   disabled?: boolean;
