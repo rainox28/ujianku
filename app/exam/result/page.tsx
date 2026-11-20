@@ -33,8 +33,21 @@ export default function ExamResultPage() {
   const [expandAllPG, setExpandAllPG] = useState(false);
   const [expandAllEssay, setExpandAllEssay] = useState(false);
 
-  // Load result from sessionStorage
+  // A fresh submit is in sessionStorage; a past result is fetched by ?id= from the dashboard.
   useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("id");
+
+    if (id) {
+      fetch(`/api/results/${encodeURIComponent(id)}`)
+        .then(async (res) => {
+          if (!res.ok) throw new Error("not found");
+          setResult((await res.json()).data);
+          setIsLoaded(true);
+        })
+        .catch(() => router.replace("/dashboard"));
+      return;
+    }
+
     const resultStr = sessionStorage.getItem("examResult");
     if (!resultStr) {
       router.replace("/exam/setup");
@@ -42,10 +55,9 @@ export default function ExamResultPage() {
     }
 
     try {
-      const data = JSON.parse(resultStr);
-      setResult(data);
+      setResult(JSON.parse(resultStr));
       setIsLoaded(true);
-    } catch (e) {
+    } catch {
       router.replace("/exam/setup");
     }
   }, [router]);

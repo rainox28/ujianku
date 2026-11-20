@@ -3,6 +3,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import {
   BookOpen,
   Brain,
@@ -93,6 +94,7 @@ const features = [
 ];
 
 export default function LandingPage() {
+  const { status: authStatus } = useSession();
   return (
     <div className="min-h-screen">
       {/* Navbar */}
@@ -124,9 +126,20 @@ export default function LandingPage() {
                 Jenjang
               </a>
             </div>
-            <Link href="/exam/setup" className="btn-primary text-sm">
-              Mulai Sekarang
-            </Link>
+            <div className="flex items-center gap-2">
+              {authStatus === "authenticated" ? (
+                <Link href="/dashboard" className="btn-ghost text-sm">
+                  Dashboard
+                </Link>
+              ) : authStatus === "unauthenticated" ? (
+                <Link href="/login" className="btn-ghost text-sm">
+                  Masuk
+                </Link>
+              ) : null}
+              <Link href="/exam/setup" className="btn-primary text-sm">
+                Mulai Sekarang
+              </Link>
+            </div>
           </div>
         </div>
       </nav>

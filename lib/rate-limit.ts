@@ -17,6 +17,8 @@ export const LIMITS = {
   retake: { user: { max: 20, windowSec: 3600 }, guest: { max: 10, windowSec: 3600 } },
   upload: { user: { max: 10, windowSec: 3600 } },
   register: { guest: { max: 5, windowSec: 3600 } },
+  // Password guesses per account, counted whether or not they succeed.
+  loginPerEmail: { max: 10, windowSec: 900 },
 } as const;
 
 export function clientIp(request: NextRequest): string {

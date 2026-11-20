@@ -5,6 +5,7 @@ import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
+import { LIMITS, rateLimit } from "@/lib/rate-limit";
 import { users } from "@/lib/db/schema";
 import { sql } from "drizzle-orm";
 
@@ -32,6 +33,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         const email = String(credentials.email).trim().toLowerCase();
+
+        // Slows down password guessing against one account.
+        if (await rateLimit(`login:${email}`, LIMITS.loginPerEmail)) return null;
         const password = credentials.password as string;
 
         const user = await db.query.users.findFirst({
