@@ -5,6 +5,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   BookOpen,
   ArrowLeft,
@@ -179,6 +180,12 @@ export default function ExamSetupPage() {
   });
 
   const { isLoading, error, generateExam, reset } = useGenerateExam();
+  const { status: authStatus } = useSession();
+
+  const [material, setMaterial] = useState<{ id: string; name: string; chars: number } | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [setupError, setSetupError] = useState<string | null>(null);
 
   const availableMapel = MATA_PELAJARAN.filter((m) =>
     m.tersediaUntuk.includes(formData.jenjang)
@@ -199,25 +206,44 @@ export default function ExamSetupPage() {
     }));
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const validTypes = EXAM_CONFIG.ALLOWED_FILE_TYPES;
-      if (validTypes.includes(file.type)) {
-        setFormData((prev) => ({ ...prev, uploadedFile: file }));
-      } else {
-        alert("Format file tidak didukung. Gunakan PDF, DOCX, atau PPTX.");
-      }
+    e.target.value = "";
+    if (!file) return;
+
+    setUploadError(null);
+    if (!EXAM_CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
+      setUploadError("Format file tidak didukung. Gunakan PDF, DOCX, atau PPTX.");
+      return;
+    }
+    if (file.size > EXAM_CONFIG.MAX_FILE_SIZE) {
+      setUploadError("Ukuran file maksimal 10MB.");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Upload gagal. Coba lagi.");
+      setMaterial({ id: json.data.materialId, name: json.data.fileName, chars: json.data.charCount });
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload gagal. Coba lagi.");
+    } finally {
+      setUploading(false);
     }
   };
 
   const removeFile = () => {
-    setFormData((prev) => ({ ...prev, uploadedFile: null }));
+    setMaterial(null);
+    setUploadError(null);
   };
 
   const handleSubmit = async () => {
     if (!formData.mataPelajaran) {
-      alert("Pilih mata pelajaran terlebih dahulu");
+      setSetupError("Pilih mata pelajaran terlebih dahulu");
       return;
     }
 
@@ -228,6 +254,7 @@ export default function ExamSetupPage() {
     sessionStorage.removeItem("examStartTime");
     sessionStorage.removeItem("examSetup");
 
+    setSetupError(null);
     setGeneratingStep(0);
 
     const totalLoadingSteps = loaderSteps(formData.jumlahSoalPG).length;
@@ -246,6 +273,7 @@ export default function ExamSetupPage() {
         mataPelajaran: formData.mataPelajaran,
         jumlahSoalPG: formData.jumlahSoalPG,
         jumlahSoalEssay: formData.jumlahSoalEssay,
+        materialId: material?.id,
       });
 
       clearInterval(stepInterval);
@@ -694,24 +722,31 @@ export default function ExamSetupPage() {
                     relevan.
                   </p>
 
-                  {formData.uploadedFile ? (
+                  {authStatus === "unauthenticated" ? (
+                    <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 text-sm text-gray-600">
+                      <Link href="/login" className="font-semibold text-primary-600 hover:text-primary-700">
+                        Masuk
+                      </Link>{" "}
+                      atau{" "}
+                      <Link href="/register" className="font-semibold text-primary-600 hover:text-primary-700">
+                        daftar
+                      </Link>{" "}
+                      untuk upload materi. Tanpa materi, soal dibuat dari kurikulum.
+                    </div>
+                  ) : material ? (
                     <div className="flex items-center gap-4 p-4 bg-green-50 rounded-xl border border-green-200">
                       <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                         <FileText className="w-6 h-6 text-green-600" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 truncate">
-                          {formData.uploadedFile.name}
-                        </p>
+                        <p className="font-medium text-gray-900 truncate">{material.name}</p>
                         <p className="text-sm text-gray-500">
-                          {(formData.uploadedFile.size / 1024 / 1024).toFixed(
-                            2
-                          )}{" "}
-                          MB
+                          {material.chars.toLocaleString("id-ID")} karakter dibaca. Soal dibuat dari materi ini.
                         </p>
                       </div>
                       <button
                         onClick={removeFile}
+                        aria-label="Hapus materi"
                         className="p-2 hover:bg-green-100 rounded-lg"
                       >
                         <X className="w-5 h-5 text-gray-500" />
@@ -719,23 +754,33 @@ export default function ExamSetupPage() {
                     </div>
                   ) : (
                     <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-primary-400 hover:bg-primary-50/50 transition-all">
-                      <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                      <p className="text-sm text-gray-500">
-                        <span className="font-semibold text-primary-600">
-                          Klik untuk upload
-                        </span>{" "}
-                        atau drag & drop
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        PDF, DOCX, atau PPTX (Max 10MB)
-                      </p>
+                      {uploading ? (
+                        <>
+                          <Loader2 className="w-8 h-8 text-primary-500 animate-spin mb-2" />
+                          <p className="text-sm text-gray-500">Membaca file...</p>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                          <p className="text-sm text-gray-500">
+                            <span className="font-semibold text-primary-600">Klik untuk upload</span>
+                          </p>
+                          <p className="text-xs text-gray-400">PDF, DOCX, atau PPTX (Max 10MB)</p>
+                        </>
+                      )}
                       <input
                         type="file"
                         className="hidden"
                         accept=".pdf,.docx,.pptx"
+                        disabled={uploading || authStatus === "loading"}
                         onChange={handleFileUpload}
                       />
                     </label>
+                  )}
+                  {uploadError && (
+                    <p role="alert" className="mt-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                      {uploadError}
+                    </p>
                   )}
                 </div>
 
@@ -744,11 +789,10 @@ export default function ExamSetupPage() {
                   <Sparkles className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="font-medium text-blue-900 mb-1">
-                      3 AI akan membuat soal secara paralel
+                      Soal dibuat lalu dicek ulang kunci jawabannya
                     </p>
                     <p className="text-blue-700">
-                      Proses generate lebih cepat dengan teknologi parallel
-                      processing. Estimasi waktu: 10-20 detik.
+                      Proses ini butuh sekitar 30-40 detik. Jangan tutup halaman selama soal dibuat.
                     </p>
                   </div>
                 </div>
@@ -756,6 +800,12 @@ export default function ExamSetupPage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {setupError && (
+          <p role="alert" className="mt-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            {setupError}
+          </p>
+        )}
 
         {/* Navigation Buttons */}
         <div className="flex items-center justify-between mt-10 pt-6 border-t border-gray-100">

@@ -11,7 +11,7 @@ interface ExamSetupData {
   mataPelajaran: string;
   jumlahSoalPG?: number; // NEW
   jumlahSoalEssay?: number; // NEW
-  materiTambahan?: string;
+  materialId?: string;
 }
 
 interface UseGenerateExamReturn {

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { createExam, toPublicExam } from "@/lib/exam/store";
+import { and, eq } from "drizzle-orm";
+import { db, materials } from "@/lib/db";
 import { generateQuestions } from "@/lib/exam/generate";
 import { LIMITS, limitCaller, rateLimit } from "@/lib/rate-limit";
 import { MATA_PELAJARAN, EXAM_CONFIG, KELAS_BY_JENJANG } from "@/lib/constants";
@@ -16,6 +18,7 @@ interface RequestBody {
   mataPelajaran: string;
   jumlahSoalPG?: number;
   jumlahSoalEssay?: number;
+  materialId?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -28,6 +31,7 @@ export async function POST(request: NextRequest) {
       mataPelajaran,
       jumlahSoalPG = EXAM_CONFIG.DEFAULT_SOAL_PG,
       jumlahSoalEssay = EXAM_CONFIG.DEFAULT_SOAL_ESSAY,
+      materialId,
     } = body;
 
     if (!jenjang || !kelas || !semester || !mataPelajaran) {
@@ -71,6 +75,20 @@ export async function POST(request: NextRequest) {
     );
 
     console.log(`\n${"=".repeat(50)}`);
+    let materi: string | undefined;
+    if (materialId) {
+      if (!session?.user?.id) {
+        return NextResponse.json({ error: "Silakan login untuk memakai materi" }, { status: 401 });
+      }
+      const material = await db.query.materials.findFirst({
+        where: and(eq(materials.id, String(materialId)), eq(materials.userId, session.user.id)),
+      });
+      if (!material) {
+        return NextResponse.json({ error: "Materi tidak ditemukan" }, { status: 404 });
+      }
+      materi = material.textContent;
+    }
+
     const { pilihanGanda, essay } = await generateQuestions({
       jenjang,
       kelas: Number(kelas),
@@ -78,6 +96,7 @@ export async function POST(request: NextRequest) {
       namaMapel: mapelInfo.nama,
       jumlahPG: finalPGCount,
       jumlahEssay: finalEssayCount,
+      materi,
     });
 
     if (pilihanGanda.length < EXAM_CONFIG.MIN_SOAL_PG || essay.length < EXAM_CONFIG.MIN_SOAL_ESSAY) {

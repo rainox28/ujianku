@@ -176,3 +176,15 @@ export const rateLimits = pgTable(
     pk: primaryKey({ columns: [t.key, t.windowStart] }),
   })
 );
+
+// Text extracted from a student's uploaded study material; the original file is not kept.
+export const materials = pgTable("materials", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  fileName: text("file_name").notNull(),
+  textContent: text("text_content").notNull(),
+  charCount: integer("char_count").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});

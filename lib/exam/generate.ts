@@ -2,7 +2,8 @@ import { randomInt } from "node:crypto";
 import { SchemaType, type GenerationConfig, type Schema } from "@google/generative-ai";
 import { createGeminiClient, MODEL_CONFIG } from "@/lib/gemini";
 import type { GeneratedSoalEssay, GeneratedSoalPG, OpsiJawaban } from "@/lib/gemini";
-import { createSoalEssayPrompt, createSoalPGBatchPrompt, PG_BATCH_FOCUS } from "@/lib/prompts";
+import { createSoalEssayPrompt, createSoalPGBatchPrompt, materiBlock, PG_BATCH_FOCUS } from "@/lib/prompts";
+import { sampleMaterial, splitMaterial } from "./material";
 import { parseAIJson } from "./ai-json";
 
 const OPSI: OpsiJawaban[] = ["A", "B", "C", "D", "E"];
@@ -188,7 +189,12 @@ const verifySchema: Schema = {
  * Spot checks found wrong keys on multi-step calculation questions even with thinking on.
  * If a verification call itself fails, that chunk is kept unverified rather than lost.
  */
-async function verifyKeys(questions: Tagged[], jenjang: string, kelas: number): Promise<Tagged[]> {
+async function verifyKeys(
+  questions: Tagged[],
+  jenjang: string,
+  kelas: number,
+  materi?: string
+): Promise<Tagged[]> {
   const chunks: Tagged[][] = [];
   for (let i = 0; i < questions.length; i += PG_BATCH_SIZE) {
     chunks.push(questions.slice(i, i + PG_BATCH_SIZE));
@@ -204,7 +210,7 @@ async function verifyKeys(questions: Tagged[], jenjang: string, kelas: number): 
         .join("\n\n");
       const prompt = `Kerjakan soal pilihan ganda ${jenjang} kelas ${kelas} berikut dengan teliti. Hitung ulang setiap langkah.
 Jawab dengan huruf opsi yang benar. Jawab "X" jika tidak ada opsi yang benar, lebih dari satu opsi benar, atau soalnya ambigu.
-
+${materi ? "Soal dibuat dari materi acuan di bawah; jawab sesuai isi materi itu.\n" + materiBlock(materi) : ""}
 ${list}
 
 Output JSON array: [{"i":0,"jawaban":"A"}]`;
@@ -254,6 +260,8 @@ interface GenerateParams {
   namaMapel: string;
   jumlahPG: number;
   jumlahEssay: number;
+  /** Extracted text of the student's uploaded material, if any. */
+  materi?: string;
 }
 
 export async function generateQuestions(params: GenerateParams) {
@@ -266,10 +274,13 @@ export async function generateQuestions(params: GenerateParams) {
 
   const target = Math.ceil(params.jumlahPG * PG_BUFFER);
   const batchCount = Math.ceil(target / PG_BATCH_SIZE);
+  // Each batch works from its own slice of the material so batches do not overlap.
+  const slices = params.materi ? splitMaterial(params.materi, batchCount) : [];
   const pgBatches = Array.from({ length: batchCount }, (_, i) => {
     const jumlahSoal = Math.min(PG_BATCH_SIZE, target - i * PG_BATCH_SIZE);
     const prompt = createSoalPGBatchPrompt({
       ...base,
+      materi: slices.length ? slices[i % slices.length] : undefined,
       jumlahSoal,
       batchIndex: i,
       batchCount,
@@ -280,6 +291,7 @@ export async function generateQuestions(params: GenerateParams) {
 
   const essayPrompt = createSoalEssayPrompt({
     ...base,
+    materi: params.materi ? sampleMaterial(params.materi, 12_000) : undefined,
     jumlahSoal: params.jumlahEssay + 1,
   });
 
@@ -295,7 +307,12 @@ export async function generateQuestions(params: GenerateParams) {
       .map((q) => ({ ...q, batch: i }))
   );
   const uniquePG = dedupe(parsedPG);
-  const verifiedPG = await verifyKeys(uniquePG, params.jenjang, params.kelas);
+  const verifiedPG = await verifyKeys(
+    uniquePG,
+    params.jenjang,
+    params.kelas,
+    params.materi ? sampleMaterial(params.materi, 15_000) : undefined
+  );
   const pilihanGanda = balanceAnswerKeys(pickAcrossBatches(verifiedPG, params.jumlahPG)).map(
     (q, i) => ({ ...q, nomor: i + 1 })
   );
