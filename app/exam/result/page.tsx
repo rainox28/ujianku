@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import {
-  BookOpen,
   ArrowLeft,
   FileText,
   PenLine,
@@ -93,7 +92,6 @@ export default function ExamResultPage() {
   const { penilaian, pembahasan, examData, jawabanUser } = result;
   const { ringkasan } = penilaian;
   
-  // ✅ Get actual counts from exam data
   const totalPG = examData.pilihanGanda.length;
   const totalEssay = examData.essay.length;
 
@@ -166,14 +164,14 @@ export default function ExamResultPage() {
                 mataPelajaran={examData.metadata.mataPelajaran}
                 jenjang={examData.metadata.jenjang}
                 kelas={examData.metadata.kelas}
-                totalPG={totalPG}        // ✅ Pass actual count
-                totalEssay={totalEssay}  // ✅ Pass actual count
+                totalPG={totalPG}
+                totalEssay={totalEssay}
               />
 
               <StatisticsCard
                 benarPG={ringkasan.benarPG}
                 salahPG={ringkasan.salahPG}
-                totalPG={totalPG}  // ✅ Use actual count
+                totalPG={totalPG}
                 essayScores={penilaian.essay.map((e) => e.nilai)}
               />
 
@@ -232,7 +230,7 @@ export default function ExamResultPage() {
                   Pembahasan Pilihan Ganda
                 </h2>
                 <p className="text-gray-500">
-                  {ringkasan.benarPG} benar dari {totalPG} soal  {/* ✅ FIX */}
+                  {ringkasan.benarPG} benar dari {totalPG} soal
                 </p>
               </div>
               <button

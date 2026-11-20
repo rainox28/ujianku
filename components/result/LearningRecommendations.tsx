@@ -2,14 +2,13 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Lightbulb, BookOpen, Target, ArrowRight } from "lucide-react";
+import { Lightbulb } from "lucide-react";
 
 interface Props {
   saranBelajar: string[];
-  weakTopics?: string[];
 }
 
-export function LearningRecommendations({ saranBelajar, weakTopics }: Props) {
+export function LearningRecommendations({ saranBelajar }: Props) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}

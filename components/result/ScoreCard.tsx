@@ -12,8 +12,8 @@ interface Props {
   mataPelajaran: string;
   jenjang: string;
   kelas: number;
-  totalPG: number; // ✅ NEW: Pass actual count
-  totalEssay: number; // ✅ NEW: Pass actual count
+  totalPG: number;
+  totalEssay: number;
 }
 
 export function ScoreCard({
@@ -21,8 +21,7 @@ export function ScoreCard({
   mataPelajaran,
   jenjang,
   kelas,
-  totalPG, // ✅ NEW
-  totalEssay, // ✅ NEW
+  totalPG,
 }: Props) {
   const isLulus = ringkasan.status === "LULUS";
   const scorePercentage = ringkasan.nilaiTotal;
@@ -151,7 +150,7 @@ export function ScoreCard({
           <div className="bg-gray-50 rounded-xl p-4 text-center">
             <p className="text-sm text-gray-500 mb-1">Pilihan Ganda</p>
             <p className="text-2xl font-bold text-gray-900">
-              {ringkasan.benarPG}/{totalPG} {/* ✅ FIX: use prop */}
+              {ringkasan.benarPG}/{totalPG}
             </p>
             <p className="text-sm text-gray-600">
               ({Math.round(ringkasan.nilaiPG)}%)

@@ -4,10 +4,8 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
-  BookOpen,
   ArrowLeft,
   ArrowRight,
   Upload,
@@ -132,7 +130,6 @@ function GeneratingLoader({ step, jumlahSoalPG }: { step: number; jumlahSoalPG: 
   );
 }
 
-// ✅ Error Component
 function ErrorDisplay({
   error,
   onRetry,
@@ -164,7 +161,6 @@ function ErrorDisplay({
 }
 
 export default function ExamSetupPage() {
-  const router = useRouter();
   const [step, setStep] = useState(1);
   const [generatingStep, setGeneratingStep] = useState(0);
   const TOTAL_STEPS = 5; // Now 5 steps instead of 4
@@ -176,7 +172,6 @@ export default function ExamSetupPage() {
     mataPelajaran: "",
     jumlahSoalPG: EXAM_CONFIG.DEFAULT_SOAL_PG,
     jumlahSoalEssay: EXAM_CONFIG.DEFAULT_SOAL_ESSAY,
-    uploadedFile: null,
   });
 
   const { isLoading, error, generateExam, reset } = useGenerateExam();
@@ -295,7 +290,7 @@ export default function ExamSetupPage() {
 
         window.location.href = "/exam/start";
       }
-    } catch (err) {
+    } catch {
       clearInterval(stepInterval);
       setGeneratingStep(0);
     }

@@ -1,4 +1,3 @@
-// app/layout.tsx - Remove manifest reference
 import type { Metadata, Viewport } from "next";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -10,8 +9,6 @@ export const metadata: Metadata = {
   description:
     "Platform ujian otomatis berbasis AI untuk siswa SD, SMP, dan SMA.",
   keywords: ["ujian online", "AI", "pendidikan", "SD", "SMP", "SMA"],
-  // ❌ REMOVE manifest for now
-  // manifest: "/manifest.json",
 };
 
 export const viewport: Viewport = {

@@ -1,7 +1,7 @@
 // components/exam/QuestionCountSelector.tsx
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { FileText, PenLine, Clock, Minus, Plus } from "lucide-react";
 import { EXAM_CONFIG, calculateDuration } from "@/lib/constants";

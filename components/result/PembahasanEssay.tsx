@@ -28,7 +28,6 @@ interface Props {
 }
 
 export function PembahasanEssay({
-  nomor,
   nomorUrut,
   pertanyaan,
   jawabanUser,
@@ -144,7 +143,7 @@ export function PembahasanEssay({
                 </div>
               </div>
 
-              {/* ✅ NEW: Konsep yang Benar */}
+              {/* Konsep yang benar */}
               {konsepBenar && konsepBenar.length > 0 && (
                 <div className="bg-success-50 rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-3">
@@ -167,7 +166,7 @@ export function PembahasanEssay({
                 </div>
               )}
 
-              {/* ✅ NEW: Konsep yang Kurang */}
+              {/* Konsep yang kurang */}
               {konsepKurang && konsepKurang.length > 0 && (
                 <div className="bg-amber-50 rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-3">

@@ -3,7 +3,6 @@
 
 import { motion } from "framer-motion";
 import { CheckCircle, XCircle, MinusCircle, Clock } from "lucide-react";
-import { EXAM_CONFIG } from "@/lib/constants";
 
 interface Props {
   benarPG: number;

@@ -7,10 +7,9 @@ import Link from "next/link";
 
 interface Props {
   onRetry: () => void;
-  onShare?: () => void;
 }
 
-export function ResultActions({ onRetry, onShare }: Props) {
+export function ResultActions({ onRetry }: Props) {
   const handleShare = async () => {
     if (navigator.share) {
       try {
@@ -19,8 +18,8 @@ export function ResultActions({ onRetry, onShare }: Props) {
           text: "Lihat hasil ujian saya di UjianKu!",
           url: window.location.href,
         });
-      } catch (err) {
-        console.log("Share cancelled");
+      } catch {
+        // The user dismissed the share sheet.
       }
     } else {
       // Fallback - copy to clipboard

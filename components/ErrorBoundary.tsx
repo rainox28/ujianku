@@ -1,5 +1,5 @@
 // components/ErrorBoundary.tsx
-"use client"; // ✅ ADD THIS
+"use client";
 
 import { Component, ReactNode } from "react";
 import { AlertTriangle, RefreshCw, Home } from "lucide-react";

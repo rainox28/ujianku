@@ -115,7 +115,6 @@ export default function ExamStartPage() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [isSubmitting]);
 
-  // ✅ Show loading until exam is loaded
   if (!isLoaded || !examData) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">

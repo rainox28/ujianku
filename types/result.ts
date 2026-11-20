@@ -1,15 +1,11 @@
+import type { GeneratedSoalEssay, GeneratedSoalPG } from "@/lib/gemini";
+
 // types/result.ts
 export interface HasilPenilaianPG {
   nomor: number;
   jawabanSiswa: string | null;
   jawabanBenar: string;
   benar: boolean;
-}
-
-export interface HasilPenilaianEssay {
-  nomor: number;
-  nilai: number;
-  feedback: string;
 }
 
 export interface RingkasanNilai {
@@ -35,16 +31,14 @@ export interface PembahasanEssay {
   konsepTerkait: string;
 }
 
-// types/result.ts - Update
 export interface HasilPenilaianEssay {
   nomor: number;
   nilai: number;
   feedback: string;
-  konsepBenar?: string[];   // NEW
-  konsepKurang?: string[];  // NEW
+  konsepBenar?: string[];
+  konsepKurang?: string[];
 }
 
-// Full interface
 export interface ExamResult {
   examId: string;
   resultId: string;
@@ -59,8 +53,8 @@ export interface ExamResult {
     saranBelajar: string[];
   };
   examData: {
-    pilihanGanda: any[];
-    essay: any[];
+    pilihanGanda: GeneratedSoalPG[];
+    essay: GeneratedSoalEssay[];
     metadata: {
       jenjang: string;
       kelas: number;

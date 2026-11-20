@@ -91,7 +91,7 @@ export const EXAM_CONFIG = {
   MIN_DURASI: 30, // minimal 30 menit
   MAX_DURASI: 180, // maksimal 3 jam
 
-  // ✅ ADD THIS - Default duration for landing page display
+  // Shown on the landing page: 30 PG x 2 min + 5 essay x 8 min.
   DEFAULT_DURASI: 100, // 30 PG × 2 min + 5 Essay × 8 min = 100 min
 
   // Scoring

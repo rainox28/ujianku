@@ -69,10 +69,9 @@ export function useGenerateExam(): UseGenerateExamReturn {
 
       setExamData(result.data);
       return result.data;
-    } catch (err: any) {
+    } catch (err) {
       console.error("Generate error:", err);
-      const errorMessage = err.message || "Terjadi kesalahan";
-      setError(errorMessage);
+      setError(err instanceof Error && err.message ? err.message : "Terjadi kesalahan");
       return null;
     } finally {
       setIsLoading(false);

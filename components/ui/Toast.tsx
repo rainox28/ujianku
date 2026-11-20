@@ -1,5 +1,5 @@
 // components/ui/Toast.tsx
-"use client"; // ✅ Make sure this is at the top
+"use client";
 
 import {
   createContext,
@@ -73,7 +73,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// ✅ Separate component for rendering toasts
 function ToastContainer({
   toasts,
   removeToast,
